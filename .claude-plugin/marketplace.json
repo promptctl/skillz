@@ -1,0 +1,14 @@
+{
+  "name": "promptctl-skillz",
+  "description": "Brandon's collection of general-purpose skills.",
+  "owner": {
+    "name": "Brandon Fryslie"
+  },
+  "plugins": [
+    {
+      "name": "skillz",
+      "source": "./",
+      "description": "Brandon's collection of general-purpose skills."
+    }
+  ]
+}

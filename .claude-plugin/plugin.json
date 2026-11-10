@@ -1,0 +1,13 @@
+{
+  "name": "skillz",
+  "version": "0.1.0",
+  "description": "Brandon's collection of general-purpose skills.",
+  "author": {
+    "name": "Brandon Fryslie"
+  },
+  "keywords": [
+    "skills",
+    "terminology",
+    "naming"
+  ]
+}

@@ -17,4 +17,4 @@ Each skill is `skills/<name>/SKILL.md`; the plugin picks up new skill directorie
 
 | Skill | Purpose |
 |---|---|
-| `word-police` | Keep a project's vocabulary on industry-standard software engineering terms. |
+| `word-police` | Realign a project's bespoke vocabulary with the standard terms of its fields; renames only what you accept. |

@@ -4,7 +4,7 @@ The spec skill is for writing and maintaining the requirements documents for a f
 that is being built: a PRD, an FSD, a technical Spec, and the traceability matrix that
 ties them together. It governs what each document carries and how the four stay in
 agreement across iterations. It does not govern how the thing is built, and it does not
-govern how work is broken into tickets; those are the code skill's and the backlog
+govern how work is broken into tickets; those are laws:code's and the backlog
 skill's jobs.
 
 ## What it is for
@@ -71,7 +71,7 @@ arbitrary truncation, and the templates' own rules — one page for the PRD's fi
 sections, the validation log as the only section that grows — already say the useful
 part.
 
-## Relationship to the other media
+## Relationship to other skills
 
 The clean-room skill specifies an application that already exists, from the
 outside, so an independent team can rebuild it. This skill specifies a feature that does
@@ -79,6 +79,5 @@ not exist yet, from the request forward. They point in opposite directions and t
 rules do not transfer: a clean-room rule about excluding internals is false here, where
 the Spec's whole job is the internals.
 
-The backlog and ticket skills govern how work is planned and written up once these
-documents say what the work is. A requirement is not a ticket, and a rule about one must
-not be copied into the other.
+The backlog skill governs how work is planned once these documents say what the work
+is. A requirement is not a ticket, and a rule about one must not be copied into the other.

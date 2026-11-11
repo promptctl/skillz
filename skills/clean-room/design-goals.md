@@ -24,7 +24,7 @@ with no access to the internals, confirm this sentence?*
 The spec writer is on the contaminated side - they have read the source or probed
 the system - and the spec is the only thing that crosses to the clean side. That is
 the ordinary mechanics of clean-room work, and the skill states it as mechanics, not
-as menace. Deliberately: the failure history of this plugin's ticket skill showed
+as menace. Deliberately: the failure history of the laws plugin's ticket skill (since cut) showed
 that a fear-heavy frame produces ceremony and over-caution, and a spec writer
 frightened into vagueness produces an unusable spec, which fails the mission as
 surely as a contaminated one. Omission and contamination get equal weight.
@@ -118,14 +118,14 @@ a shipping procedure.
 
 ## Structural choices
 
-- Same shape as the other artifact skills: a thin `SKILL.md` that names the target,
+- Same shape as the laws plugin's artifact skills: a thin `SKILL.md` that names the target,
   the output path, and the acceptance criterion, then sends the writer to read the
   craft before observing anything; and the craft in `references/craft.md`, written
-  in the whole-session-hold style under the `prompt` skill's authority - the spec-writing
+  in the whole-session-hold style under laws:prompt's authority - the spec-writing
   session is long and autonomous, and the contamination temptation ("the implementer
   needs to know how this works inside") arrives deep in it, exactly where guidance
   has to still fire.
-- Canonical tokens in the house pattern (`[APPSPEC:<token>]`) with a closing recap,
+- Canonical tokens in the laws plugin's token pattern (`[APPSPEC:<token>]`) with a closing recap,
   so rules are citable at the moment a sentence is being written into the spec.
 
 ## What it deliberately avoids, and why
@@ -136,8 +136,8 @@ a shipping procedure.
   surface that doesn't exist for a target (no persistent state, say) is recorded as
   absent, which is itself a boundary fact.
 
-- **Fear framing of the legal constraint.** The measured lesson from the ticket
-  skill's history: menace produces ceremony, and a writer scared of every sentence
+- **Fear framing of the legal constraint.** The measured lesson from the laws plugin's
+  ticket skill's history: menace produces ceremony, and a writer scared of every sentence
   pads the spec with hedges or omits sharp facts it is entitled to state. The
   boundary test is stated as a working instrument the writer applies sentence by
   sentence, with contamination and omission as symmetric defects.
@@ -149,7 +149,7 @@ a shipping procedure.
   this inversion explicitly because every other documentation genre teaches the
   opposite.
 
-- **Source references as pointers.** The plugin's other skills use "point, don't
+- **Source references as pointers.** The laws plugin's skills use "point, don't
   transcribe" (a filename beats a copied excerpt). Here that device is *inverted*
   by the medium: the clean reader must never follow a pointer into the source, so
   the spec transcribes the boundary fact exactly and points at nothing. Craft from

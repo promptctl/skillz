@@ -1,5 +1,6 @@
 <!--
-  Style authority for future edits to this file: skills/prompt/references/craft.md
+  Style authority for future edits to this file: laws:prompt's craft
+  (plugins/laws/skills/prompt/references/craft.md in promptctl/laws)
   (the whole-session hold - amplitude, images, rehearsed temptations, disarmed proverbs,
   negative examples, stakes register). The specifications this file teaches are NOT
   its style authority: a spec is exact and stated-once; this guidance must keep
@@ -329,8 +330,8 @@ only inside the application belong to none of these layers; they stay out under
 
 **No references into the source tree - ever.** The temptation: *"this parser is
 intricate - I'll just point them at `src/parser/grammar.js` rather than re-derive
-it all."* Refuse it, and note that this refusal *inverts* a habit the rest of this
-plugin teaches. Elsewhere, point-don't-transcribe is right - a filename beats a
+it all."* Refuse it, and note that this refusal *inverts* a habit most writing
+guidance teaches. Elsewhere, point-don't-transcribe is right - a filename beats a
 copied excerpt when your reader can open the file. Here the medium flips the rule:
 your reader is forbidden from opening the file. A pointer into the source is a
 door in the boundary wall, broken twice - it invites the clean team through

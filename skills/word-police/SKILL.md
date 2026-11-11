@@ -242,52 +242,15 @@ After the items, add a short **Checked and left alone** list. These are terms th
 looked bespoke but are standard, with a one-line reason each. It shows the user the
 mirror-image failure was checked. Stop there and wait for the user's ruling.
 
-### 5. Lock it in with the user
+### 5. Apply
 
-The user answers item by item: accept, reject, change the name, or ask about it.
+Ask the user which changes, if any, they want to accept. Make the changes the user accepts.
 
-- **Acceptance is explicit.** "Interesting" is not acceptance, and neither is
-  silence. "Yes to 1–4 and 7" is.
-- **A changed name is a new proposal.** Verify it the way step 3 does, show the
-  evidence, and confirm it.
-- **Ambiguous items need the user's ruling.** Bring the options and your
-  recommendation. Don't settle it yourself.
-- **After each round, show the whole proposal again,** with each item marked
-  accepted, rejected, or open. That keeps the current state in front of both of you.
-
-The locking ends when the user says to go ahead. Items still open at that point
-aren't renamed.
-
-The temptation arrives mid-iteration: *"Items 1 through 3 are obviously right, and
-the user will accept them. I'll start those while they think about the rest."* Or it
-arrives as standing guidance: *"Don't ask, resolve: I can write 'I recommend X', so
-I've decided."* Refuse both. Here the user designed the gate themselves: renaming
-waits on their acceptance. Your recommendation goes into the proposal. The decision
-belongs to them, item by item. A rename they didn't accept touches every file the
-word lives in, and someone then has to find it and undo it.
-
-### 6. Rename the accepted items
-
-- **Make one commit per concept,** so each rename can be reviewed and reverted on its
-  own.
-- **Cover every variant the spread found:** identifiers, files and directories
-  (`git mv`), tests, docs, comments, config, log and metric names, and the project's
-  own guidance files (CLAUDE.md, AGENTS.md, skills). The guidance files are where
-  the next agent learns the vocabulary.
-- **Rename by identifier, not by blind text replacement.** Review each hit, respect
-  word boundaries, and leave the term alone where it appears inside another word or
-  means something else.
-- **Leave no alias,** no compatibility shim, and no "formerly X" comment. A
-  half-finished rename gives one concept two names, which is worse than either name
-  alone. History and changelogs keep the old name.
-- **Rename a public name only if the user accepted the break,** as the proposal
-  marked it.
-
-### 7. Verify
+### 6. Verify
 
 - A search for every old variant returns nothing outside history and changelogs.
 - The build and the tests pass.
-- Report each renamed item with its commit, and anything accepted that wasn't done,
+- Report each renamed item, and anything accepted that wasn't done,
   with the reason.
 
 ## Done
@@ -295,6 +258,6 @@ word lives in, and someone then has to find it and undo it.
 The skill is finished when:
 
 - the user has ruled on every item they wanted to rule on
-- every accepted rename is committed, with its old variants searched down to zero
+- every accepted rename is made, with its old variants searched down to zero
   and the tests passing
 - no rename happened that the user didn't explicitly accept

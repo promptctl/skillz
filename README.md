@@ -18,3 +18,5 @@ Each skill is `skills/<name>/SKILL.md`; the plugin picks up new skill directorie
 | Skill | Purpose |
 |---|---|
 | `word-police` | Realign a project's bespoke vocabulary with the standard terms of its fields; renames only what you accept. |
+| `clean-room` | Specify an existing application from the outside, precisely enough for an independent team to rebuild it without seeing it. |
+| `spec` | Write and maintain the PRD, FSD and technical spec for a feature being built, tied by a traceability matrix. |

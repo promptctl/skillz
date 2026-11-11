@@ -1,16 +1,18 @@
 ---
 name: word-police
-description: Realign a project that has grown its own bespoke vocabulary with the standard terminology of its fields - software engineering first, plus whatever domains the project lives in (finance, audio, networking, ...). Fans Haiku subagents across the codebase to find invented words, misused standard terms, near-miss variants, internal synonyms, and unnamed concepts; and verifies each against established usage. Renames only what the user accepts. Use when the user says "word police", "align our terminology", "we're inventing words", "what's the standard term for this", "audit the naming", "rename to standard terms", or wants a codebase's vocabulary brought in line with its industry. Optionally scoped to a path.
+description: Realign a project that has grown its own bespoke vocabulary with the standard terminology of its fields - software engineering first, plus whatever domains the project lives in (finance, audio, networking, ...). Fans Haiku subagents across the codebase to find invented words, misused standard terms, near-miss variants, internal synonyms, and unnamed concepts; verifies each against established usage; and works with the user, round by round, to lock in a rename proposal. Renames only what the user explicitly accepts. Use when the user says "word police", "align our terminology", "we're inventing words", "what's the standard term for this", "audit the naming", "rename to standard terms", or wants a codebase's vocabulary brought in line with its industry. Optionally scoped to a path.
 ---
 
 # Word police
 
 Bring a project's vocabulary in line with the standard terminology of its fields, so
 a concept has the same name here as in the field's literature and someone from the
-industry recognizes it on sight. The skill finds the bespoke words and proposes the
-standard ones.
+industry recognizes it on sight. The skill finds the bespoke words, proposes the
+standard ones, and works with the user until a proposal is locked in.
 
-**It renames only what the user accepts.** Until then everything is read-only.
+**It renames only what the user explicitly accepts.** Until then everything is
+read-only: scan, verify, propose, revise. The gate holds for every item, however
+obvious the item looks.
 
 ## Why the words matter
 
@@ -171,7 +173,7 @@ but are standard, one-line reason each. Then stop and wait for the user's ruling
 
 ### 5. Apply
 
-Ask the user which changes, if any, they want to accept. Make the changes the user accepts.
+Make the changes the user accepts, and only those.
 
 ### 6. Verify
 
@@ -184,4 +186,4 @@ done, with the reason.
 - The user has ruled on every item they wanted to rule on.
 - Every accepted rename is made, its old variants searched down to zero, tests
   passing.
-- No rename happened that the user didn't accept.
+- No rename happened that the user didn't explicitly accept.

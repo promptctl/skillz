@@ -337,7 +337,7 @@ your reader is forbidden from opening the file. A pointer into the source is a
 door in the boundary wall, broken twice - it invites the clean team through
 (voiding their clean status the moment they follow it) and it fails the handoff
 (the spec no longer stands alone). Transcribe the boundary fact exactly; point at
-nothing. Craft from other media does not carry in.
+nothing. Writing advice from other kinds of document does not carry in.
 
 - BAD: "Accepted expression syntax: see `src/parser/grammar.js`."
 - GOOD: "Accepted expression syntax (verified against the running tool):

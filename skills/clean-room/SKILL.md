@@ -5,7 +5,7 @@ description: Produce a thorough, functional, clean-room specification of an exis
 
 # Producing this artifact
 
-The craft for this medium lives in `references/craft.md`, relative to this skill's
+The craft for this skill lives in `references/craft.md`, relative to this skill's
 base directory.
 
 1. Read `references/craft.md` before touching the target.

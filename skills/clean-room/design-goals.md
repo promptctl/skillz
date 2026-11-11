@@ -24,7 +24,7 @@ with no access to the internals, confirm this sentence?*
 The spec writer is on the contaminated side - they have read the source or probed
 the system - and the spec is the only thing that crosses to the clean side. That is
 the ordinary mechanics of clean-room work, and the skill states it as mechanics, not
-as menace. Deliberately: the failure history of the laws plugin's ticket skill (since cut) showed
+as menace. Deliberately: the failure history of the laws plugin's ticket skill (since cut; in promptctl/laws history at be21578) showed
 that a fear-heavy frame produces ceremony and over-caution, and a spec writer
 frightened into vagueness produces an unusable spec, which fails the mission as
 surely as a contaminated one. Omission and contamination get equal weight.
@@ -137,7 +137,7 @@ a shipping procedure.
   absent, which is itself a boundary fact.
 
 - **Fear framing of the legal constraint.** The measured lesson from the laws plugin's
-  ticket skill's history: menace produces ceremony, and a writer scared of every sentence
+  ticket skill's history (see above): menace produces ceremony, and a writer scared of every sentence
   pads the spec with hedges or omits sharp facts it is entitled to state. The
   boundary test is stated as a working instrument the writer applies sentence by
   sentence, with contamination and omission as symmetric defects.
@@ -149,11 +149,11 @@ a shipping procedure.
   this inversion explicitly because every other documentation genre teaches the
   opposite.
 
-- **Source references as pointers.** The laws plugin's skills use "point, don't
+- **Source references as pointers.** Most writing guidance teaches "point, don't
   transcribe" (a filename beats a copied excerpt). Here that device is *inverted*
-  by the medium: the clean reader must never follow a pointer into the source, so
-  the spec transcribes the boundary fact exactly and points at nothing. Craft from
-  the other media does not carry in.
+  by the document's reader: the clean reader must never follow a pointer into the source, so
+  the spec transcribes the boundary fact exactly and points at nothing. Writing advice
+  from other kinds of document does not carry in.
 
 - **Performance numbers as default content.** Observable timing is boundary-real
   but usually incidental; the spec records timing and resource behavior only where

@@ -25,8 +25,8 @@ Existing session: a new detached window is added to it — no existing pane is
 reused, and no attached client's view is switched.
 
 <repo> must be a git repository. The worktree is <main checkout>/.claude/worktrees/<name>
-on branch worktree-<name>, the layout claude --worktree uses; a new one is cut
-from origin's default branch after a fetch. claude starts with its cwd there,
+on branch worktree-<name>, the layout claude --worktree uses; a branch that
+doesn't exist yet is cut from origin's default branch after a fetch. claude starts with its cwd there,
 not with --worktree, so it is not confined to the worktree: it can run any
 command a session started in the repo could.
 
@@ -50,7 +50,8 @@ while :; do
   case "${1:-}" in
     --session)  [[ -n "${2:-}" ]] || { echo "repo-session: --session requires a name" >&2; exit 1; }
                 SESSION_ARG="$2"; shift 2 ;;
-    --worktree) [[ -n "${2:-}" && "$2" != -* ]] || { echo "repo-session: --worktree requires a name (not starting with '-')" >&2; exit 1; }
+    # [LAW:parse-dont-validate] one path segment, so the worktree stays in .claude/worktrees.
+    --worktree) [[ "${2:-}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "repo-session: --worktree requires a name of letters, digits, '.', '_', '-' (starting with a letter or digit)" >&2; exit 1; }
                 WORKTREE_ARG="$2"; shift 2 ;;
     *) break ;;
   esac
@@ -83,11 +84,14 @@ REPO_DIR=$(cd "$REPO_ARG" && pwd -P)
 
 # [LAW:one-source-of-truth] the layout is claude --worktree's, so a worktree made
 # either way — and the lit claims tied to its path — is the same worktree. The
-# main checkout is the parent of the common git dir, so a <repo> that is itself
-# a worktree still lands in the main checkout's .claude/worktrees.
-COMMON_DIR=$(git -C "$REPO_DIR" rev-parse --path-format=absolute --git-common-dir) ||
-  { echo "repo-session: not a git repository: $REPO_DIR" >&2; exit 1; }
-MAIN_DIR=$(dirname "$COMMON_DIR")
+# main checkout is git's first worktree entry, so a <repo> that is itself a
+# worktree still lands in the main checkout's .claude/worktrees. Pruning first
+# drops entries whose directory was deleted: a listed worktree exists. The list
+# is read whole before grep: piped, grep -q's early exit would SIGPIPE git and
+# pipefail would read a found worktree as missing.
+git -C "$REPO_DIR" worktree prune || { echo "repo-session: not a git repository: $REPO_DIR" >&2; exit 1; }
+WORKTREES=$(git -C "$REPO_DIR" worktree list --porcelain)
+MAIN_DIR=$(sed -n '1s/^worktree //p' <<<"$WORKTREES")
 WT_ROOT="$MAIN_DIR/.claude/worktrees"
 WT_NAME=$WORKTREE_ARG
 while [[ -z "$WT_NAME" ]]; do
@@ -96,17 +100,20 @@ while [[ -z "$WT_NAME" ]]; do
 done
 WT_DIR="$WT_ROOT/$WT_NAME"
 
-# Reuse is the registered worktree at that path; anything else is created. A
-# path or branch already taken by something else makes worktree add fail loudly,
-# rather than start the session on a stale branch. The list is read whole before
-# grep: piped, grep -q's early exit would SIGPIPE git and pipefail would read a
-# found worktree as missing. git's stdout goes to stderr: stdout is the pane id.
-WORKTREES=$(git -C "$MAIN_DIR" worktree list --porcelain)
+# Reuse is the registered worktree at that path. Otherwise the branch is checked
+# out there, and a branch that doesn't exist yet is first cut from origin's
+# default branch, as set-head reads it from origin now. A branch whose worktree
+# was removed keeps its commits. A path taken by anything else makes worktree
+# add fail loudly. git's stdout goes to stderr: stdout is the pane id.
+BRANCH="worktree-$WT_NAME"
 if ! grep -qxF "worktree $WT_DIR" <<<"$WORKTREES"; then
-  DEFAULT=$(git -C "$MAIN_DIR" symbolic-ref --short refs/remotes/origin/HEAD) ||
-    { echo "repo-session: $MAIN_DIR has no origin/HEAD to cut the worktree from (git remote set-head origin --auto sets it)" >&2; exit 1; }
-  git -C "$MAIN_DIR" fetch origin >&2
-  git -C "$MAIN_DIR" worktree add --no-track -b "worktree-$WT_NAME" "$WT_DIR" "$DEFAULT" >&2
+  if ! git -C "$MAIN_DIR" show-ref --verify --quiet "refs/heads/$BRANCH"; then
+    git -C "$MAIN_DIR" fetch origin >&2
+    git -C "$MAIN_DIR" remote set-head origin --auto >&2
+    DEFAULT=$(git -C "$MAIN_DIR" symbolic-ref --short refs/remotes/origin/HEAD)
+    git -C "$MAIN_DIR" branch --no-track "$BRANCH" "$DEFAULT" >&2
+  fi
+  git -C "$MAIN_DIR" worktree add "$WT_DIR" "$BRANCH" >&2
 fi
 
 # [LAW:dataflow-not-control-flow] the session is one value on every path, the

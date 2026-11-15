@@ -35,7 +35,8 @@ What the script does, so you don't redo any of it by hand:
   repository and the work lands on a branch, not in the repo's own checkout:
   `<main checkout>/.claude/worktrees/<name>` on branch `worktree-<name>`, the
   layout `claude --worktree` uses. A worktree already registered there is
-  reused; otherwise it fetches and cuts a new one from origin's default branch.
+  reused; otherwise the branch is checked out there, cut first from origin's
+  default branch after a fetch if it doesn't exist yet.
 - Runs `claude --dangerously-skip-permissions` as the pane's own process, with
   its cwd in that worktree. It deliberately does not pass `--worktree`: a
   session started that way refuses every command it can't prove stays inside

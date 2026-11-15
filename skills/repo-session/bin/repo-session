@@ -24,7 +24,7 @@ rooted at the worktree.
 Existing session: a new detached window is added to it — no existing pane is
 reused, and no attached client's view is switched.
 
-<repo> must be a git repository. The worktree is <main checkout>/.claude/worktrees/<name>
+<repo> must be a git repository with an origin remote. The worktree is <main checkout>/.claude/worktrees/<name>
 on branch worktree-<name>, the layout claude --worktree uses; a branch that
 doesn't exist yet is cut from origin's default branch after a fetch. claude starts with its cwd there,
 not with --worktree, so it is not confined to the worktree: it can run any
@@ -50,8 +50,10 @@ while :; do
   case "${1:-}" in
     --session)  [[ -n "${2:-}" ]] || { echo "repo-session: --session requires a name" >&2; exit 1; }
                 SESSION_ARG="$2"; shift 2 ;;
-    # [LAW:parse-dont-validate] one path segment, so the worktree stays in .claude/worktrees.
-    --worktree) [[ "${2:-}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "repo-session: --worktree requires a name of letters, digits, '.', '_', '-' (starting with a letter or digit)" >&2; exit 1; }
+    # [LAW:parse-dont-validate] one path segment, so the worktree stays in
+    # .claude/worktrees, that git also takes as a branch name.
+    --worktree) [[ "${2:-}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] && git check-ref-format "refs/heads/worktree-$2" ||
+                  { echo "repo-session: --worktree requires a name of letters, digits, '.', '_', '-' (starting with a letter or digit) that git accepts as a branch name" >&2; exit 1; }
                 WORKTREE_ARG="$2"; shift 2 ;;
     *) break ;;
   esac
@@ -71,7 +73,7 @@ fi
 # would make a second one and confine the session to it, refusing any command it
 # can't prove stays inside — the confinement this script exists to avoid.
 for a in ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}; do
-  case "$a" in --worktree|--worktree=*|-w) echo "repo-session: pass the worktree as --worktree <name> before <repo>, not after -- ($a)" >&2; exit 1 ;; esac
+  case "$a" in --worktree|--worktree=*|-w*) echo "repo-session: pass the worktree as --worktree <name> before <repo>, not after -- ($a)" >&2; exit 1 ;; esac
 done
 
 # [LAW:no-silent-failure] a bare name means ~/code/<name>; anything else is a path.
@@ -91,7 +93,7 @@ REPO_DIR=$(cd "$REPO_ARG" && pwd -P)
 # worktree as missing.
 WORKTREES=$(git -C "$REPO_DIR" worktree list --porcelain) || { echo "repo-session: not a git repository: $REPO_DIR" >&2; exit 1; }
 MAIN_DIR=$(sed -n '1s/^worktree //p' <<<"$WORKTREES")
-[[ $(sed -n 2p <<<"$WORKTREES") != bare ]] || { echo "repo-session: $MAIN_DIR is a bare repository: pass a checkout of it" >&2; exit 1; }
+[[ $(sed -n 2p <<<"$WORKTREES") != bare ]] || { echo "repo-session: $MAIN_DIR is a bare repository; a bare repo with linked worktrees is not supported" >&2; exit 1; }
 WT_ROOT="$MAIN_DIR/.claude/worktrees"
 WT_NAME=$WORKTREE_ARG
 while [[ -z "$WT_NAME" ]]; do
@@ -100,19 +102,22 @@ while [[ -z "$WT_NAME" ]]; do
 done
 WT_DIR="$WT_ROOT/$WT_NAME"
 
-# Reuse is a registered worktree whose directory exists: one deleted by hand
-# makes worktree add fail loudly, with git's own remedy, rather than start claude
-# in a missing directory. Otherwise the branch is checked out there, and a
-# branch that doesn't exist yet is first cut from origin's default branch, as
-# origin reports it now (read, not written to origin/HEAD). A branch whose
-# worktree was removed keeps its commits. A path taken by anything else makes
-# worktree add fail loudly. git's stdout goes to stderr: stdout is the pane id.
+# Reuse is a registered worktree whose directory exists, compared by its
+# resolved path, the one git records. A path taken by anything else is refused
+# before a branch is made, so an existing branch always means a removed
+# worktree's commits: it is checked out there, commits kept. A worktree deleted
+# by hand makes worktree add fail loudly, with git's own remedy, rather than
+# start claude in a missing directory. A branch that doesn't exist yet is cut
+# from origin's default branch as origin reports it now (read, not written to
+# origin/HEAD), fetching that branch only. git's stdout goes to stderr: stdout
+# is the pane id.
 BRANCH="worktree-$WT_NAME"
-if ! { [[ -d "$WT_DIR" ]] && grep -qxF "worktree $WT_DIR" <<<"$WORKTREES"; }; then
+if ! { [[ -d "$WT_DIR" ]] && grep -qxF "worktree $(cd "$WT_DIR" && pwd -P)" <<<"$WORKTREES"; }; then
+  [[ ! -e "$WT_DIR" ]] || { echo "repo-session: $WT_DIR exists and is not a registered worktree" >&2; exit 1; }
   if ! git -C "$MAIN_DIR" show-ref --verify --quiet "refs/heads/$BRANCH"; then
-    git -C "$MAIN_DIR" fetch origin >&2
     DEFAULT=$(git -C "$MAIN_DIR" ls-remote --symref origin HEAD | awk '$1 == "ref:" { sub("^refs/heads/", "", $2); print $2 }')
     [[ -n "$DEFAULT" ]] || { echo "repo-session: origin reports no default branch to cut the worktree from" >&2; exit 1; }
+    git -C "$MAIN_DIR" fetch origin "$DEFAULT" >&2
     git -C "$MAIN_DIR" branch --no-track "$BRANCH" "origin/$DEFAULT" >&2
   fi
   git -C "$MAIN_DIR" worktree add "$WT_DIR" "$BRANCH" >&2

@@ -6,7 +6,7 @@ set -euo pipefail
 # for input, and print its pane id. Briefing it and reading its work is the
 # controller's job through /tmux-talk and /tmux-command — not fused here.
 
-USAGE="repo-session — launch claude (--worktree --dangerously-skip-permissions) in a repo's tmux session
+USAGE="repo-session — launch claude (--dangerously-skip-permissions) in a git worktree of a repo, in the repo's tmux session
 
 Usage:
   repo-session [--session <name>] [--worktree <name>] <repo> [-- <extra claude args>...]
@@ -14,17 +14,21 @@ Usage:
   <repo>   A directory path, or a bare name resolved as ~/code/<name>.
   --session <name>   Put the window in this tmux session instead of the one
                      named for the directory.
-  --worktree <name>  Name the worktree claude works in (to reuse one, e.g. when
-                     resuming). Without it claude names a new one itself.
+  --worktree <name>  Name the worktree claude works in. An existing worktree of
+                     that name is reused (e.g. when resuming). Without it a new
+                     one is named session-<4 hex digits>.
 
 The tmux session is the --session name, or the directory's basename; in either,
 '.' and ':' become '_', as tmux requires. Missing session: created detached,
-rooted at the repo.
+rooted at the worktree.
 Existing session: a new detached window is added to it — no existing pane is
 reused, and no attached client's view is switched.
 
-claude runs with --worktree: it works in a new git worktree of the repo, so <repo>
-must be a git repository.
+<repo> must be a git repository with an origin remote. The worktree is <main checkout>/.claude/worktrees/<name>
+on branch worktree-<name>, the layout claude --worktree uses; a branch that
+doesn't exist yet is cut from origin's default branch after a fetch. claude starts with its cwd there,
+not with --worktree, so it is not confined to the worktree: it can run any
+command a session started in the repo could.
 
 claude is the pane's own process: no shell runs in front of it, so no rc file,
 prompt theme, or shell plugin runs in that pane. The pane closes when claude
@@ -41,12 +45,15 @@ ready, is left running with its id in the message, for whoever reads the pane."
 
 case "${1:-}" in -h|--help) echo "$USAGE"; exit 0 ;; esac
 SESSION_ARG=""
-WORKTREE_ARG=""   # empty => claude names the worktree itself
+WORKTREE_ARG=""   # empty => a fresh name is picked below
 while :; do
   case "${1:-}" in
     --session)  [[ -n "${2:-}" ]] || { echo "repo-session: --session requires a name" >&2; exit 1; }
                 SESSION_ARG="$2"; shift 2 ;;
-    --worktree) [[ -n "${2:-}" && "$2" != -* ]] || { echo "repo-session: --worktree requires a name (not starting with '-')" >&2; exit 1; }
+    # [LAW:parse-dont-validate] one path segment, so the worktree stays in
+    # .claude/worktrees, that git also takes as a branch name.
+    --worktree) [[ "${2:-}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] && git check-ref-format "refs/heads/worktree-$2" ||
+                  { echo "repo-session: --worktree requires a name of letters, digits, '.', '_', '-' (starting with a letter or digit) that git accepts as a branch name" >&2; exit 1; }
                 WORKTREE_ARG="$2"; shift 2 ;;
     *) break ;;
   esac
@@ -62,10 +69,11 @@ if [[ $# -gt 0 ]]; then
   shift
   EXTRA_ARGS=("$@")
 fi
-# [LAW:no-silent-failure] a second --worktree after '--' would reach claude beside
-# the one this script adds, and claude's choice between them is not ours to rely on.
+# [LAW:single-enforcer] the worktree is made here only. claude's own --worktree
+# would make a second one and confine the session to it, refusing any command it
+# can't prove stays inside — the confinement this script exists to avoid.
 for a in ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}; do
-  case "$a" in --worktree|--worktree=*|-w) echo "repo-session: pass the worktree as --worktree <name> before <repo>, not after -- ($a)" >&2; exit 1 ;; esac
+  case "$a" in --worktree|--worktree=*|-w*) echo "repo-session: pass the worktree as --worktree <name> before <repo>, not after -- ($a)" >&2; exit 1 ;; esac
 done
 
 # [LAW:no-silent-failure] a bare name means ~/code/<name>; anything else is a path.
@@ -75,6 +83,45 @@ if [[ "$REPO_ARG" != */* && ! -d "$REPO_ARG" ]]; then
 fi
 [[ -d "$REPO_ARG" ]] || { echo "repo-session: no such directory: $REPO_ARG" >&2; exit 1; }
 REPO_DIR=$(cd "$REPO_ARG" && pwd -P)
+
+# The layout copies claude --worktree's (checked against a claude-made worktree;
+# re-check it if claude moves them), so a worktree made either way — and the lit
+# claims tied to its path — is the same worktree. The main checkout is git's
+# first worktree entry, so a <repo> that is itself a worktree still lands in the
+# main checkout's .claude/worktrees. The list is read whole before grep: piped,
+# grep -q's early exit would SIGPIPE git and pipefail would read a found
+# worktree as missing.
+WORKTREES=$(git -C "$REPO_DIR" worktree list --porcelain) || { echo "repo-session: not a git repository: $REPO_DIR" >&2; exit 1; }
+MAIN_DIR=$(sed -n '1s/^worktree //p' <<<"$WORKTREES")
+[[ $(sed -n 2p <<<"$WORKTREES") != bare ]] || { echo "repo-session: $MAIN_DIR is a bare repository; a bare repo with linked worktrees is not supported" >&2; exit 1; }
+WT_ROOT="$MAIN_DIR/.claude/worktrees"
+WT_NAME=$WORKTREE_ARG
+while [[ -z "$WT_NAME" ]]; do
+  CANDIDATE="session-$(printf %04x "$RANDOM")"
+  [[ -e "$WT_ROOT/$CANDIDATE" ]] || git -C "$MAIN_DIR" show-ref --verify --quiet "refs/heads/worktree-$CANDIDATE" || WT_NAME=$CANDIDATE
+done
+WT_DIR="$WT_ROOT/$WT_NAME"
+
+# Reuse is a registered worktree whose directory exists, compared by its
+# resolved path, the one git records. A path taken by anything else is refused
+# before a branch is made, so an existing branch always means a removed
+# worktree's commits: it is checked out there, commits kept. A worktree deleted
+# by hand makes worktree add fail loudly, with git's own remedy, rather than
+# start claude in a missing directory. A branch that doesn't exist yet is cut
+# from origin's default branch as origin reports it now (read, not written to
+# origin/HEAD), fetching that branch only. git's stdout goes to stderr: stdout
+# is the pane id.
+BRANCH="worktree-$WT_NAME"
+if ! { [[ -d "$WT_DIR" ]] && grep -qxF "worktree $(cd "$WT_DIR" && pwd -P)" <<<"$WORKTREES"; }; then
+  [[ ! -e "$WT_DIR" ]] || { echo "repo-session: $WT_DIR exists and is not a registered worktree" >&2; exit 1; }
+  if ! git -C "$MAIN_DIR" show-ref --verify --quiet "refs/heads/$BRANCH"; then
+    DEFAULT=$(git -C "$MAIN_DIR" ls-remote --symref origin HEAD | awk '$1 == "ref:" { sub("^refs/heads/", "", $2); print $2 }')
+    [[ -n "$DEFAULT" ]] || { echo "repo-session: origin reports no default branch to cut the worktree from" >&2; exit 1; }
+    git -C "$MAIN_DIR" fetch origin "$DEFAULT" >&2
+    git -C "$MAIN_DIR" branch --no-track "$BRANCH" "origin/$DEFAULT" >&2
+  fi
+  git -C "$MAIN_DIR" worktree add "$WT_DIR" "$BRANCH" >&2
+fi
 
 # [LAW:dataflow-not-control-flow] the session is one value on every path, the
 # caller's or the directory's basename, and one sanitization applies to both.
@@ -91,14 +138,10 @@ CLAUDE_BIN=$(command -v claude) || { echo "repo-session: no 'claude' on PATH" >&
 # subprocess shell is the managed settings' decision (settings.managed.json
 # env.CLAUDE_CODE_SHELL), not this launcher's.
 #
-# [LAW:no-mode-explosion] Every instance works in a git worktree (--worktree):
-# no switch to turn it off, so the instance never edits the repo's own checkout.
-# The only variability is the name, a value: set, it follows the flag; unset, it
-# expands to nothing. -w takes an optional [name] and would swallow a following
-# token that does not start with '-', so another flag always follows it here.
-# [LAW:single-enforcer] The flag lives here only: a caller wanting a name passes
-# --worktree <name> to this script, never --worktree after the '--'.
-CMD=("$CLAUDE_BIN" --worktree ${WORKTREE_ARG:+"$WORKTREE_ARG"} --dangerously-skip-permissions ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"})
+# [LAW:no-mode-explosion] Every instance works in a git worktree: no switch to
+# turn it off, so the instance never edits the repo's own checkout. The
+# worktree is the window's cwd, not a claude flag.
+CMD=("$CLAUDE_BIN" --dangerously-skip-permissions ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"})
 
 # [LAW:types-are-the-program] the handle is the pane id, never the window
 # index: config/tmux/tmux.conf sets renumber-windows on, so when one of several
@@ -118,13 +161,13 @@ ADDR_FMT=$'#{pane_id}\t#{session_name}:#{window_index}.#{pane_index}'
 # sequence is the user's current window.
 REMAIN=(set-option -w -t "=$SESSION:{end}" remain-on-exit failed)
 if tmux has-session -t "=$SESSION" 2>/dev/null; then
-  CREATED=$(tmux new-window -d -a -t "=$SESSION:{end}" -c "$REPO_DIR" -n claude -P -F "$ADDR_FMT" "${CMD[@]}" \; "${REMAIN[@]}")
+  CREATED=$(tmux new-window -d -a -t "=$SESSION:{end}" -c "$WT_DIR" -n claude -P -F "$ADDR_FMT" "${CMD[@]}" \; "${REMAIN[@]}")
 else
-  CREATED=$(tmux new-session -d -s "$SESSION" -c "$REPO_DIR" -n claude -P -F "$ADDR_FMT" "${CMD[@]}" \; "${REMAIN[@]}")
+  CREATED=$(tmux new-session -d -s "$SESSION" -c "$WT_DIR" -n claude -P -F "$ADDR_FMT" "${CMD[@]}" \; "${REMAIN[@]}")
 fi
 ADDRESS=${CREATED%%$'\t'*}; WHERE=${CREATED#*$'\t'}
 [[ "$ADDRESS" == %* ]] || { echo "repo-session: tmux returned no pane id: '$CREATED'" >&2; exit 1; }
-echo "repo-session: $ADDRESS at $WHERE (cwd $REPO_DIR) running:$(printf ' %q' "${CMD[@]}")" >&2
+echo "repo-session: $ADDRESS at $WHERE (cwd $WT_DIR) running:$(printf ' %q' "${CMD[@]}")" >&2
 
 # [LAW:no-silent-failure] the pane id is only worth printing once claude can
 # take a message. A dialog at boot means a human decision is pending: report it

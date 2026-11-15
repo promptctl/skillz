@@ -1,6 +1,6 @@
 ---
 name: repo-session
-description: Start a Claude instance in another repo and delegate work to it over tmux. Creates (or adds a window to) the tmux session named after the repo's directory, launches `claude --worktree --dangerously-skip-permissions` there (the instance works in its own new git worktree), waits until it takes input, and prints its pane id; you then brief it verbatim with /tmux-command, look again ~10s later to confirm it is actually working, wait, and verify what it produced. Use when the user says "start a session in <repo>", "spin up claude in ~/code/<repo>", "launch claude in <repo>", "delegate this to <repo>", "have an agent in <repo> do X", or when work you have found belongs to a repo other than the one you are in (file the ticket there, then hand it to an instance started here).
+description: Start a Claude instance in another repo and delegate work to it over tmux. Creates (or adds a window to) the tmux session named after the repo's directory, launches `claude --dangerously-skip-permissions` there in a git worktree of the repo the script makes or reuses, waits until it takes input, and prints its pane id; you then brief it verbatim with /tmux-command, look again ~10s later to confirm it is actually working, wait, and verify what it produced. Use when the user says "start a session in <repo>", "spin up claude in ~/code/<repo>", "launch claude in <repo>", "delegate this to <repo>", "have an agent in <repo> do X", or when work you have found belongs to a repo other than the one you are in (file the ticket there, then hand it to an instance started here).
 ---
 
 # repo-session
@@ -22,20 +22,27 @@ ADDR=$("$RS" gh-pages-multiplexer)               # bare name → ~/code/<name>
 ADDR=$("$RS" ~/code/some/path)                    # or any directory
 ADDR=$("$RS" home-infra -- --model sonnet)        # extra claude args after --
 ADDR=$("$RS" --session "$MINE" ~/code/x)          # into a session you name
-ADDR=$("$RS" --worktree my-name ~/code/x)         # name the worktree (default: claude picks)
+ADDR=$("$RS" --worktree my-name ~/code/x)         # name or reuse the worktree (default: a new session-<hex>)
 ```
 
 What the script does, so you don't redo any of it by hand:
 
 - Session name = `--session <name>` if given, else the directory's basename
-  (`.`/`:` become `_` in either, as tmux requires). No session yet → it creates one, detached, rooted at the repo. Session exists →
+  (`.`/`:` become `_` in either, as tmux requires). No session yet → it creates one, detached. Session exists →
   it adds a new detached window. It never types into an existing pane and never
   switches what an attached user is looking at.
-- Runs `claude --worktree [name] --dangerously-skip-permissions` as the pane's own
-  process. `--worktree` gives the instance a git worktree of the repo (new,
-  unless you name an existing one with `--worktree <name>`), so
-  the directory must be a git repository and the work lands on a branch in that
-  worktree, not in the repo's own checkout. No
+- Gives the instance a git worktree of the repo, so the directory must be a git
+  repository and the work lands on a branch, not in the repo's own checkout:
+  `<main checkout>/.claude/worktrees/<name>` on branch `worktree-<name>`, the
+  layout `claude --worktree` uses. A worktree already registered there is
+  reused; otherwise the branch is checked out there, cut first from origin's
+  default branch after a fetch if it doesn't exist yet.
+- Runs `claude --dangerously-skip-permissions` as the pane's own process, with
+  its cwd in that worktree. It deliberately does not pass `--worktree`: a
+  session started that way refuses every command it can't prove stays inside
+  its worktree (`git -C <main checkout>`, `bash script.sh`, `gh` with a `jq`
+  pipe), and no setting turns that off. So don't pass `--worktree` after `--`;
+  the script refuses it. No
   shell sits in front of it, so none of the user's rc files, prompt theme, or
   shell plugins run in that pane. The pane closes when Claude
   exits cleanly; a Claude that crashes leaves its screen in a dead pane, so a

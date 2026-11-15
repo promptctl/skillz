@@ -126,7 +126,12 @@ a shipping procedure.
   needs to know how this works inside") arrives deep in it, exactly where guidance
   has to still fire.
 - Canonical tokens in the laws plugin's token pattern (`[APPSPEC:<token>]`) with a closing recap,
-  so rules are citable at the moment a sentence is being written into the spec.
+  so rules are citable at the moment a spec sentence is being decided.
+  The citations live in the writer's reasoning and notes, never in the spec: the
+  clean team holds only the spec, so a token there points at a document they
+  never receive. The audit passes' findings stay with the writer for a sharper
+  reason - a purity record lists the internals it removed, and shipping it would
+  carry them back across the boundary.
 
 ## What it deliberately avoids, and why
 

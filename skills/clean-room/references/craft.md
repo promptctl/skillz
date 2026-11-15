@@ -376,12 +376,34 @@ audits read the whole artifact at once.
   flag-vs-env precedence unstated"), the fixes, then a reread pass that caught
   and rewrote two mechanism verbs.
 
-Diagnostic: can you point at where each pass happened and what each changed?
+**The audits' record stays on your side of the boundary.** Keep the findings
+lists in your working notes, outside the spec's directory; the spec carries only
+what the audits produced - the filled holes, the rewritten sentences. The second
+temptation arrives with the finished findings list in hand: *"I'll append an
+audit section so the clean team can see the spec was checked."* Refuse it. A
+purity record is a list of the gears you took out of the case - "rewrote 'the
+retry queue drains' as observed redelivery" - and handing it over puts every one
+of them back across the boundary. A completeness record tells the clean team
+nothing a finished surface section doesn't already say. What they need to know
+about trust is already in the provenance section and the `UNVERIFIED` markers,
+which describe the target, not your process; those stay.
+
+- BAD: an `appspec/audit.md` listing "purity pass: removed mention of the LRU
+  cache in §4; dropped `SessionManager` from §6."
+- GOOD: §4 and §6 state only the observed behavior; the two findings live in the
+  writer's notes beside the spec, never inside it.
+
+Diagnostic: can you point, in your notes, at where each pass happened and what
+each changed - and does nothing in the spec mention either pass?
 
 ## Recap - the tokens
 
-Cite these as `[APPSPEC:<token>]` at the moment of use while writing spec
-sentences.
+Cite these as `[APPSPEC:<token>]` at the moment of use - in your own reasoning
+and working notes, while a spec sentence is being decided. They are your
+instruments, not the clean team's: no token appears in the delivered spec. The
+clean team holds the spec and nothing else, so a token there points at a
+document that never crosses to them, and a sentence that cites a rule instead of
+stating an observable effect is not a spec sentence.
 
 - `[APPSPEC:boundary-decides]` - one test, two directions: outside-observable and
   missing is a defect; inside-only and present is a defect. Every port, no gears.
@@ -411,9 +433,11 @@ sentences.
   sharp enough to become an acceptance test with no follow-up questions.
 - `[APPSPEC:spec-stands-alone]` - self-contained `appspec/` (overridable):
   overview, boundary definition, provenance (identity/version, channels, observed
-  vs. derived), then surfaces; no references into the source tree, ever.
+  vs. derived), then surfaces; no references into the source tree, ever, and no
+  `[APPSPEC:*]` tokens.
 - `[APPSPEC:two-audit-passes]` - before shipping: a completeness sweep of the
-  nine surfaces, then a purity reread of every sentence.
+  nine surfaces, then a purity reread of every sentence; the findings stay in
+  your notes, and the spec carries only the fixes.
 
 The whole document in one breath: stand outside the case with every instrument
 you have; write down everything the ports do, exactly where machines read and

@@ -85,13 +85,13 @@ fi
 
 # [LAW:no-ambient-temporal-coupling] name the session and cwd explicitly instead
 # of relying on tmux's ambient "current" — in multi-client setups the active
-# pane may not be ours, and a wrong cwd makes `claude --worktree` build a
+# pane may not be ours, and a wrong cwd makes repo-session build a
 # worktree of the wrong (or no) repo.
 SELF_SESSION=$(tmux display-message -p -t "$TMUX_PANE" '#{session_name}')
 WORKDIR=$(tmux display-message -p -t "$TMUX_PANE" '#{pane_current_path}')
 
 # [LAW:dataflow-not-control-flow] the worktree is not a mode toggled on/off — it
-# is unconditional, and repo-session adds the flag; the only variability is the
+# is unconditional, and repo-session makes it; the only variability is the
 # VALUE (auto vs named), handed to repo-session as --worktree <name>. Optional
 # overrides are appended as values when present, never as an empty default that
 # would lie about meaning. Note: --tmux is intentionally NOT passed — it would
@@ -105,7 +105,7 @@ CLAUDE_ARGS=(--model "$MODEL")
 # waiting for its prompt, and printing the pane id is repo-session's job; this
 # launcher only decides the session, the cwd, and claude's argv. argv reaches
 # claude token for token with no shell in the pane, so no rc, prompt theme, or
-# plugin runs there. --worktree and --dangerously-skip-permissions are repo-session's to add.
+# plugin runs there. The worktree and --dangerously-skip-permissions are repo-session's.
 REPO_SESSION="$(cd "$(dirname "$0")" && pwd -P)/../../repo-session/bin/repo-session"
 [[ -x "$REPO_SESSION" ]] || { echo "hire-a-minion: no repo-session launcher at $REPO_SESSION" >&2; exit 1; }
 exec "$REPO_SESSION" --session "$SELF_SESSION" ${WORKTREE_NAME:+--worktree "$WORKTREE_NAME"} "$WORKDIR" -- "${CLAUDE_ARGS[@]}"

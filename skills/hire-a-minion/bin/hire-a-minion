@@ -25,7 +25,7 @@ Flags:
 
 claude is the window's own process: no shell runs in front of it, so no rc
 file, prompt theme, or shell plugin runs in that pane. The window is added
-detached, in this tmux session, rooted at this pane's cwd.
+detached, in this tmux session, rooted at the minion's worktree.
 
 Prints the minion's tmux pane id (%N) on stdout once claude shows its input
 prompt; feed it straight into /tmux-talk. It stays the same pane for as long

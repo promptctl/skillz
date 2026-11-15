@@ -82,16 +82,16 @@ fi
 [[ -d "$REPO_ARG" ]] || { echo "repo-session: no such directory: $REPO_ARG" >&2; exit 1; }
 REPO_DIR=$(cd "$REPO_ARG" && pwd -P)
 
-# [LAW:one-source-of-truth] the layout is claude --worktree's, so a worktree made
-# either way — and the lit claims tied to its path — is the same worktree. The
-# main checkout is git's first worktree entry, so a <repo> that is itself a
-# worktree still lands in the main checkout's .claude/worktrees. Pruning first
-# drops entries whose directory was deleted: a listed worktree exists. The list
-# is read whole before grep: piped, grep -q's early exit would SIGPIPE git and
-# pipefail would read a found worktree as missing.
-git -C "$REPO_DIR" worktree prune || { echo "repo-session: not a git repository: $REPO_DIR" >&2; exit 1; }
-WORKTREES=$(git -C "$REPO_DIR" worktree list --porcelain)
+# The layout copies claude --worktree's (checked against a claude-made worktree;
+# re-check it if claude moves them), so a worktree made either way — and the lit
+# claims tied to its path — is the same worktree. The main checkout is git's
+# first worktree entry, so a <repo> that is itself a worktree still lands in the
+# main checkout's .claude/worktrees. The list is read whole before grep: piped,
+# grep -q's early exit would SIGPIPE git and pipefail would read a found
+# worktree as missing.
+WORKTREES=$(git -C "$REPO_DIR" worktree list --porcelain) || { echo "repo-session: not a git repository: $REPO_DIR" >&2; exit 1; }
 MAIN_DIR=$(sed -n '1s/^worktree //p' <<<"$WORKTREES")
+[[ $(sed -n 2p <<<"$WORKTREES") != bare ]] || { echo "repo-session: $MAIN_DIR is a bare repository: pass a checkout of it" >&2; exit 1; }
 WT_ROOT="$MAIN_DIR/.claude/worktrees"
 WT_NAME=$WORKTREE_ARG
 while [[ -z "$WT_NAME" ]]; do
@@ -100,18 +100,20 @@ while [[ -z "$WT_NAME" ]]; do
 done
 WT_DIR="$WT_ROOT/$WT_NAME"
 
-# Reuse is the registered worktree at that path. Otherwise the branch is checked
-# out there, and a branch that doesn't exist yet is first cut from origin's
-# default branch, as set-head reads it from origin now. A branch whose worktree
-# was removed keeps its commits. A path taken by anything else makes worktree
-# add fail loudly. git's stdout goes to stderr: stdout is the pane id.
+# Reuse is a registered worktree whose directory exists: one deleted by hand
+# makes worktree add fail loudly, with git's own remedy, rather than start claude
+# in a missing directory. Otherwise the branch is checked out there, and a
+# branch that doesn't exist yet is first cut from origin's default branch, as
+# origin reports it now (read, not written to origin/HEAD). A branch whose
+# worktree was removed keeps its commits. A path taken by anything else makes
+# worktree add fail loudly. git's stdout goes to stderr: stdout is the pane id.
 BRANCH="worktree-$WT_NAME"
-if ! grep -qxF "worktree $WT_DIR" <<<"$WORKTREES"; then
+if ! { [[ -d "$WT_DIR" ]] && grep -qxF "worktree $WT_DIR" <<<"$WORKTREES"; }; then
   if ! git -C "$MAIN_DIR" show-ref --verify --quiet "refs/heads/$BRANCH"; then
     git -C "$MAIN_DIR" fetch origin >&2
-    git -C "$MAIN_DIR" remote set-head origin --auto >&2
-    DEFAULT=$(git -C "$MAIN_DIR" symbolic-ref --short refs/remotes/origin/HEAD)
-    git -C "$MAIN_DIR" branch --no-track "$BRANCH" "$DEFAULT" >&2
+    DEFAULT=$(git -C "$MAIN_DIR" ls-remote --symref origin HEAD | awk '$1 == "ref:" { sub("^refs/heads/", "", $2); print $2 }')
+    [[ -n "$DEFAULT" ]] || { echo "repo-session: origin reports no default branch to cut the worktree from" >&2; exit 1; }
+    git -C "$MAIN_DIR" branch --no-track "$BRANCH" "origin/$DEFAULT" >&2
   fi
   git -C "$MAIN_DIR" worktree add "$WT_DIR" "$BRANCH" >&2
 fi

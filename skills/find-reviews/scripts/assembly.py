@@ -20,7 +20,7 @@ class Placed:
     logical: str
     pr: Pr
     ticket: Ticket
-    level: str | None
+    kind: str | None
     models: tuple[str, ...]
     transcript: str
     result: Result
@@ -64,7 +64,7 @@ def assemble(placed: Iterable[Placed]) -> Document:
             pr=first.pr,
             ticket=first.ticket,
             reviews=tuple(
-                Review(r.id, numbers[r.id], r.level, r.models, r.at.isoformat(), r.transcript, r.result)
+                Review(r.id, numbers[r.id], r.kind, r.models, r.at.isoformat(), r.transcript, r.result)
                 for r in reviews
             ),
         ))

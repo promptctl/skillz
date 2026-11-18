@@ -32,7 +32,7 @@ from review_record import (
 from transcript_lib import iter_rows, projects_root, slug_for
 
 DEFAULT_WINDOW = timedelta(hours=72)
-LAUNCH_NEEDLES = (b"code-review", b"agentId")
+LAUNCH_NEEDLES = (*(skill.encode() for skill in rd.REVIEW_SKILLS), b"agentId")
 
 
 class GatherError(Exception):
@@ -210,7 +210,7 @@ class Transcripts:
     def scan(self, session: Session) -> list[rd.Launch]:
         found, calls, answered = [], [], set()
         for path in session.files():
-            rows = list(iter_rows(path, *LAUNCH_NEEDLES))
+            rows = [(n, row) for n, row in iter_rows(path, *LAUNCH_NEEDLES) if not rd.is_copied(row)]
             inputs = rd.skill_calls(rows)
             calls += rd.review_calls(str(path), rows)
             for line, row in rows:
@@ -226,7 +226,7 @@ class Transcripts:
         interrupted = rd.pair_interrupted((c for c in calls if c.tool_use_id not in answered), unlaunched)
         paired = {i.agent_id for i in interrupted}
         # A review subagent no record launches and no call explains is reported, never dropped. [LAW:nothing-unseen]
-        self.orphans += [h for h in unlaunched if rd.REVIEW_OPENING.match(h.prompt) and h.agent_id not in paired]
+        self.orphans += [h for h in unlaunched if rd.is_review_opening(h.prompt) and h.agent_id not in paired]
         return found + interrupted
 
     def outer(self, session: Session, path: Path, line: int) -> tuple[Path, int]:
@@ -354,7 +354,7 @@ def place(reads: list[Read], resolver: Resolver, roots: dict[str, str], t: Trans
         review_id = (f"inline-{r.session.id}-{r.launch.line}" if isinstance(r.launch, rd.Inline)
                      else r.launch.agent_id)
         placed.append(Placed(review_id, r.launch.at, roots.get(r.session.id, r.session.id), pr, ticket,
-                             r.launch.level, r.models, f"{outer_path}:{outer_line}", result))
+                             r.launch.kind, r.models, f"{outer_path}:{outer_line}", result))
     return placed
 
 

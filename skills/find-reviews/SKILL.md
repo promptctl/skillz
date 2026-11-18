@@ -1,6 +1,6 @@
 ---
 name: find-reviews
-description: List the code reviews of recent work PR by PR — each PR with its lit ticket and a summary of the ticket's premise, and per review its number, level, model, finding count and accepted count, with a pointer into the session transcript. Use when asked to list, count or look over code reviews, review findings or accepted findings for a session (including the sessions /clear chained to it) or a time range such as today, the last day, this week or the last 3 days.
+description: List the code reviews of recent work PR by PR, both /code-review and /laws:law-review — each PR with its lit ticket and a summary of the ticket's premise, and per review its number, kind (its effort level, or law review), model, finding count and accepted count, with a pointer into the session transcript. Use when asked to list, count or look over code reviews, review findings or accepted findings for a session (including the sessions /clear chained to it) or a time range such as today, the last day, this week or the last 3 days.
 ---
 
 # find-reviews

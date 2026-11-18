@@ -8,17 +8,23 @@ from review_record import Count, Excerpt, Pending
 AT = "2026-11-08T21:43:09.422Z"
 
 
-def skill_result(agent_id=None, tool_use_id="toolu_1"):
-    result = {"success": True, "commandName": "code-review"}
+def skill_result(agent_id=None, tool_use_id="toolu_1", skill="code-review"):
+    result = {"success": True, "commandName": skill}
     if agent_id:
         result.update(status="forked", agentId=agent_id)
     return {"type": "user", "timestamp": AT, "gitBranch": "t2yz-fix", "toolUseResult": result,
             "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": tool_use_id}]}}
 
 
-def skill_call(args, tool_use_id="toolu_1"):
+def skill_call(args, tool_use_id="toolu_1", skill="code-review"):
     return {"type": "assistant", "message": {"content": [
-        {"type": "tool_use", "id": tool_use_id, "name": "Skill", "input": {"skill": "code-review", "args": args}}]}}
+        {"type": "tool_use", "id": tool_use_id, "name": "Skill", "input": {"skill": skill, "args": args}}]}}
+
+
+# The first message of a forked plugin skill: its directory, then its body with the arguments in place.
+LAW_REVIEW_OPENING = ("Base directory for this skill: /Users/bmf/code/promptctl_laws/plugins/laws/skills/law-review\n\n"
+                      "`law review -> load the laws -> 11 Haiku angles`\n\n"
+                      "Review target (empty means the current diff): `{}`\n\n## Before anything")
 
 
 def assistant(text=None, model="claude-haiku-5-5", tool=None):
@@ -41,7 +47,7 @@ class Launches(unittest.TestCase):
         calls = rd.skill_calls([(110, skill_call("low --max-findings all"))])
         launch = rd.parse_launch("main.jsonl", 111, skill_result(), calls)
         self.assertIsInstance(launch, rd.Inline)
-        self.assertEqual((launch.level, launch.args), ("low", "low --max-findings all"))
+        self.assertEqual((launch.kind, launch.args), ("low", "low --max-findings all"))
 
     def test_a_typed_command_is_a_forked_launch(self):
         row = {"type": "system", "subtype": "local_command", "timestamp": AT, "gitBranch": "brandon-menus-sjhy.bc0",
@@ -49,7 +55,7 @@ class Launches(unittest.TestCase):
                           '<forked-skill-launch>{"agentId":"a9ab8c0959146be40","skillName":"code-review",'
                           '"description":"/code-review medium --max-findings all"}</forked-skill-launch>'}
         launch = rd.parse_launch("main.jsonl", 5436, row, {})
-        self.assertEqual((launch.agent_id, launch.level), ("a9ab8c0959146be40", "medium"))
+        self.assertEqual((launch.agent_id, launch.kind), ("a9ab8c0959146be40", "medium"))
         self.assertEqual(rd.parse_agent_launch("main.jsonl", 5436, row).agent_id, "a9ab8c0959146be40")
 
     def test_an_agent_wrapper_labelled_code_review_is_not_a_review(self):
@@ -59,9 +65,48 @@ class Launches(unittest.TestCase):
         self.assertIsNone(rd.parse_launch("main.jsonl", 9, row, {}))
         self.assertEqual(rd.parse_agent_launch("main.jsonl", 9, row).description, "/code-review low 325")
 
+    def test_a_row_a_fork_copied_from_its_parent_is_the_parents(self):
+        copied = skill_result("a1") | {"forkedFrom": {"sessionId": "461054f7", "messageUuid": "b12488a5"}}
+        self.assertTrue(rd.is_copied(copied))
+        self.assertFalse(rd.is_copied(skill_result("a1")))
+
     def test_a_launch_with_no_level_word_has_no_level(self):
         calls = rd.skill_calls([(1, skill_call("PR 700"))])
-        self.assertIsNone(rd.parse_launch("m", 2, skill_result("a1"), calls).level)
+        self.assertIsNone(rd.parse_launch("m", 2, skill_result("a1"), calls).kind)
+
+
+class LawReviews(unittest.TestCase):
+    """The laws plugin's review, recorded under its plugin name, as skillz:code-review was (647f07e7.jsonl:79, agent a368da04)."""
+
+    def test_a_forked_law_review_is_a_review_of_kind_law_review(self):
+        calls = rd.skill_calls([(1, skill_call("701", skill="laws:law-review"))])
+        launch = rd.parse_launch("m", 2, skill_result("a1", skill="laws:law-review"), calls)
+        self.assertEqual(launch, rd.Forked("a1", "m", 2, rd.timestamp(AT), "t2yz-fix", "law review"))
+
+    def test_a_typed_law_review_is_a_forked_launch(self):
+        row = {"type": "system", "subtype": "local_command", "timestamp": AT,
+               "content": '<forked-skill-launch>{"agentId":"a2","skillName":"laws:law-review",'
+                          '"description":"/laws:law-review 701"}</forked-skill-launch>'}
+        self.assertEqual(rd.parse_launch("m", 3, row, {}).kind, "law review")
+
+    def test_a_skill_outside_the_table_is_not_a_review(self):
+        calls = rd.skill_calls([(1, skill_call("high 701", skill="skillz:code-review"))])
+        self.assertEqual(calls, {})
+        self.assertIsNone(rd.parse_launch("m", 2, skill_result("a1", skill="skillz:code-review"), calls))
+
+    def test_a_law_review_states_its_target_below_its_header(self):
+        self.assertEqual(rd.review_target_text(prompt(LAW_REVIEW_OPENING.format("PR 701"))), "PR 701")
+        self.assertEqual(rd.review_target_text(prompt(LAW_REVIEW_OPENING.format(""))), "")
+
+    def test_an_interrupted_call_pairs_only_with_a_subagent_its_own_skill_opens(self):
+        row = skill_call("701", "t1", "laws:law-review") | {"timestamp": "2026-11-06T05:47:53.337Z"}
+        call = rd.review_calls("main.jsonl", [(53, row)])[0]
+        law = rd.AgentHead("law", "agent-law.jsonl", rd.timestamp("2026-11-06T05:47:53.500Z"), LAW_REVIEW_OPENING.format("701"))
+        builtin = rd.AgentHead("builtin", "agent-builtin.jsonl", rd.timestamp("2026-11-06T05:47:53.400Z"),
+                               "`high effort → 8 inline angles`")
+        self.assertEqual([i.agent_id for i in rd.pair_interrupted([call], [builtin, law])], ["law"])
+        self.assertTrue(rd.is_review_opening(law.prompt) and rd.is_review_opening(builtin.prompt))
+        self.assertFalse(rd.is_review_opening("Base directory for this skill: /x/skills/find-reviews\n\n# find-reviews"))
 
 
 class InterruptedReviews(unittest.TestCase):
@@ -75,7 +120,7 @@ class InterruptedReviews(unittest.TestCase):
         return rd.AgentHead(agent_id, f"agent-{agent_id}.jsonl", rd.timestamp(at), text)
 
     def test_a_call_records_where_it_was_made_and_its_level(self):
-        self.assertEqual(self.call(), rd.ReviewCall("toolu_016g", "main.jsonl", 53, rd.timestamp("2026-11-06T05:47:53.337Z"),
+        self.assertEqual(self.call(), rd.ReviewCall("toolu_016g", "code-review", "main.jsonl", 53, rd.timestamp("2026-11-06T05:47:53.337Z"),
                                                     "x.1ql", "high"))
 
     def test_a_launch_record_names_the_call_it_answers(self):

@@ -1,6 +1,6 @@
 ---
 name: delegate-some-shit
-description: Pick one work item with the user, hand it to a worker subagent that drives it from start to open PR, validate the diff against the ticket's goals, then hand the PR to a fresh reviewer subagent that runs the code-review cycle (high, medium, low), fixes each round, walks the goals, records the outcome on the PR, and stops before merge — then validate again yourself, merge, and close the ticket. Use when the user says "delegate some shit", "hand this off to a subagent", "have an agent do the next ticket", "delegate a ticket", or wants a ticket worked end to end while this session only supervises.
+description: Pick one work item with the user, hand it to a worker subagent that drives it from start to open PR, validate the diff against the ticket's goals, then hand the PR to a fresh reviewer subagent that runs the review cycle (law review, then code-review high, medium, low), fixes each round, walks the goals, records the outcome on the PR, and stops before merge — then validate again yourself, merge, and close the ticket. Use when the user says "delegate some shit", "hand this off to a subagent", "have an agent do the next ticket", "delegate a ticket", or wants a ticket worked end to end while this session only supervises.
 ---
 
 # Delegate some shit
@@ -94,8 +94,8 @@ CLAUDE.md git workflow, a mandatory session handoff): opening the PR is where yo
 that workflow ends. The review passes, the merge, the ticket close and the handoff are the
 supervisor's.
 
-Do NOT: merge the PR. Run `lit done` or close the ticket. Run /code-review, because a
-separate reviewer runs it. Run memento:message-in-a-bottle or any other session handoff,
+Do NOT: merge the PR. Run `lit done` or close the ticket. Run /code-review or
+/laws:law-review, because a separate reviewer runs them. Run memento:message-in-a-bottle or any other session handoff,
 because you may be sent more work on this PR. Expand scope beyond the goals; note extra
 findings in your report instead.
 
@@ -177,7 +177,7 @@ instead of the diff. D sees nothing but its prompt, so fill in every section of 
 template.
 
 ```
-You are D: you run the code-review cycle on PR #<n> (branch <branch>, head <sha>) of
+You are D: you run the review cycle on PR #<n> (branch <branch>, head <sha>) of
 <repo>, fix what deserves fixing, walk the goals, post one review-outcome comment on the
 PR, and STOP. You do not merge. A supervisor merges after checking your work.
 
@@ -190,8 +190,8 @@ PR, and STOP. You do not merge. A supervisor merges after checking your work.
 - This run has a supervisor, and it overrides any standing workflow you have loaded (a
   CLAUDE.md git workflow, its session-start checkout of master, its review-then-merge
   steps): the cycle below replaces them.
-- Every /code-review takes the PR number: `/code-review high <n>`. A bare `/code-review`
-  diffs against upstream after a push and reviews nothing.
+- Every review takes the PR number: `/laws:law-review <n>`, `/code-review high <n>`. A
+  bare one diffs against upstream after a push and reviews nothing.
 - Scope is the ticket. A finding about code the PR did not need to touch is declined as
   **out of scope** and listed in your report, not fixed here, even when it is right.
 - Settled, do not reopen: [goals recorded as blocked, and any decision the user made
@@ -214,19 +214,25 @@ PR, and STOP. You do not merge. A supervisor merges after checking your work.
 </user-requirements>
 
 ## The cycle
-1. `/code-review high <n>`. Address each finding by carefully considering the feedback.
-   Do not accept any feedback or proposed fixes blindly. Fix what is right; decline what
-   is wrong, with a concrete reason (a command's output, a file:line, a test). Commit the
-   round's fixes, then push.
-2. `/code-review medium <n>`. Handle it the same way.
-3. Only if medium found anything major: ONE more `/code-review high <n>`.
+1. `/laws:law-review <n>`, the review against the laws. It runs first because its first
+   finding may be a wrong decision the rest of the diff is built on, and the later rounds
+   should read the code after that is fixed. Address each finding by carefully considering
+   the feedback. Do not accept any feedback or proposed fixes blindly. Fix what is right;
+   decline what is wrong, with a concrete reason (a command's output, a file:line, a test).
+   Commit the round's fixes, then push. A finding that tells you to run
+   /skillz:lets-take-a-step-back or /skillz:something-just-came-up asks for a restart or
+   a new ticket, which are the supervisor's: stop and report it as a major finding you are
+   not fixing.
+2. `/code-review high <n>`. Handle it the same way.
+3. `/code-review medium <n>`. Handle it the same way.
+4. Only if medium found anything major: ONE more `/code-review high <n>`.
    In any round, a major finding you are NOT fixing stops you: report it with your
    reason, and do not run the rounds after it.
-4. `/code-review low <n>` is the merge gate. On a P0, fix it, push, and run low again
+5. `/code-review low <n>` is the merge gate. On a P0, fix it, push, and run low again
    until it comes back clean, or stop and report if you cannot fix it.
-5. Walk every goal on your final head with evidence you ran yourself (a command and its
+6. Walk every goal on your final head with evidence you ran yourself (a command and its
    output, or a file:line). Re-run the tests there.
-6. Post ONE comment with `gh pr comment <n> --body-file <file>`, headed
+7. Post ONE comment with `gh pr comment <n> --body-file <file>`, headed
    `## Review outcome (head <sha>)`: a section per round with numbered findings, each
    **Fixed in <sha>** or **Declined** with the reason, then the goals with their evidence.
 
@@ -300,8 +306,8 @@ as `Title (#N)`), e.g. `gh pr merge <n> --squash --delete-branch`. Then:
 
 You pick the ticket with the user, settle its goals, and spawn the worker, which writes
 the code up to an open PR. You read the diff, not the report, and check the goals. Then a
-fresh reviewer, D, runs high, medium (plus one high if medium found something major), and
-low on the PR by number, fixes each round, walks the goals, posts the outcome, and stops
+fresh reviewer, D, runs the law review, then high, medium (plus one high if medium found
+something major), and low on the PR by number, fixes each round, walks the goals, posts the outcome, and stops
 before merge. You check the goals again yourself, because D's walk is a report, not your
 check. An unfixed or disputed major finding stops the run. Done is merged, with the outcome recorded,
 goals checked twice by you, `lit done` run, master clean, and the handoff run.

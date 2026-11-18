@@ -14,15 +14,15 @@ DOC = {"groups": [
      "pr": {"number": 702, "url": "https://github.com/o/r/pull/702", "outcome": {"open": None}},
      "ticket": {"id": "e.pj1z", "summary": {"pending": "lit show e.pj1z --field description"}},
      "reviews": [
-         {"id": "a1", "n": 1, "level": "medium", "models": ["claude-haiku-5-5"], "started": "2026-11-08T22:18:48+00:00",
+         {"id": "a1", "n": 1, "kind": "medium", "models": ["claude-haiku-5-5"], "started": "2026-11-08T22:18:48+00:00",
           "transcript": "/t/s1.jsonl:12639", "result": {"answered": {"findings": {"count": 7}, "accepted": PENDING}}},
-         {"id": "a2", "n": 2, "level": None, "models": [], "started": "2026-11-08T22:28:50+00:00",
+         {"id": "a2", "n": 2, "kind": None, "models": [], "started": "2026-11-08T22:28:50+00:00",
           "transcript": "/t/s1.jsonl:12895", "result": {"unanswered": "stopped by user"}},
      ]},
     {"id": "unresolved-1@s1", "session": "s1", "pr": {"unresolved": "detached HEAD"},
      "ticket": {"unresolved": "its PR is unresolved"},
      "reviews": [
-         {"id": "a3", "n": 1, "level": "low", "models": ["claude-opus-5-5"], "started": "2026-11-08T20:00:00+00:00",
+         {"id": "a3", "n": 1, "kind": "low", "models": ["claude-opus-5-5"], "started": "2026-11-08T20:00:00+00:00",
           "transcript": "/t/s1.jsonl:10", "result": {"answered": {"findings": {"unknown": "prose list was ambiguous"},
                                                                   "accepted": {"count": 0}}}},
      ]},

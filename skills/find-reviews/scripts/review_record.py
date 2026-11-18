@@ -70,7 +70,7 @@ Result = Answered | Unanswered
 class Review:
     id: str
     n: int
-    level: str | None
+    kind: str | None
     models: tuple[str, ...]
     started: str
     transcript: str
@@ -221,13 +221,13 @@ def _result(value: object, path: str) -> Result:
 
 
 def _review(value: object, path: str) -> Review:
-    d = _object(value, path, {"id", "n", "level", "models", "started", "transcript", "result"})
-    level = d["level"]
+    d = _object(value, path, {"id", "n", "kind", "models", "started", "transcript", "result"})
+    kind = d["kind"]
     models = _list(d["models"], f"{path}.models")
     return Review(
         id=_str(d["id"], f"{path}.id"),
         n=_int(d["n"], f"{path}.n"),
-        level=None if level is None else _str(level, f"{path}.level"),
+        kind=None if kind is None else _str(kind, f"{path}.kind"),
         models=tuple(_str(m, f"{path}.models[{i}]") for i, m in enumerate(models)),
         started=_str(d["started"], f"{path}.started"),
         transcript=_str(d["transcript"], f"{path}.transcript"),
@@ -357,7 +357,7 @@ def dump_document(doc: Document) -> dict:
             "pr": _dump_pr(g.pr),
             "ticket": _dump_ticket(g.ticket),
             "reviews": [
-                {"id": r.id, "n": r.n, "level": r.level, "models": list(r.models), "started": r.started,
+                {"id": r.id, "n": r.n, "kind": r.kind, "models": list(r.models), "started": r.started,
                  "transcript": r.transcript, "result": _dump_result(r.result)}
                 for r in g.reviews
             ],

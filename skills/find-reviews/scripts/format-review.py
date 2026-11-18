@@ -45,7 +45,7 @@ def _tally(t: Tally) -> str:
 
 
 def _review(r: Review) -> list[str]:
-    head = f"Review #{r.n} ({r.level or 'level unstated'}) // Model: {'+'.join(r.models) or 'none recorded'}"
+    head = f"Review #{r.n} ({r.kind or 'level unstated'}) // Model: {'+'.join(r.models) or 'none recorded'}"
     match r.result:
         case Answered(findings, accepted):
             line = f"{head} // Findings: {_tally(findings)} // Accepted: {_tally(accepted)}"

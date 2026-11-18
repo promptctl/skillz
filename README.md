@@ -21,7 +21,6 @@ Each skill is `skills/<name>/SKILL.md`; the plugin picks up new skill directorie
 | `clean-room` | Specify an existing application from the outside, precisely enough for an independent team to rebuild it without seeing it. |
 | `spec` | Write and maintain the PRD, FSD and technical spec for a feature being built, tied by a traceability matrix. |
 | `capability-backlog` | Break a request or founding document into a capability-first story map and tickets. |
-| `code-review` | Review a diff, PR, branch, or path for correctness bugs at a chosen effort level. |
 | `delegate-some-shit` | Hand one work item to a worker subagent that drives it to an open PR, then validate the result. |
 | `find-reviews` | List the code reviews of recent work, PR by PR. |
 | `find-session` | Find past Claude Code sessions by topic and read context around a match. |

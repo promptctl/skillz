@@ -11,7 +11,7 @@ from __future__ import annotations
 import bisect
 import json
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
@@ -33,6 +33,12 @@ def text_of(row: dict) -> str:
     if isinstance(content, str):
         return content
     return "\n".join(b.get("text", "") for b in content or [] if isinstance(b, dict) and b.get("type") == "text")
+
+
+def is_copied(row: dict) -> bool:
+    """A row a forked session copied from the session it forked from. It records that session's
+    work, which is read where it happened, never a second time in the fork. [LAW:one-source-of-truth]"""
+    return "forkedFrom" in row
 
 
 def is_prompt(row: dict) -> bool:
@@ -59,7 +65,7 @@ class Forked:
     line: int
     at: datetime
     branch: str | None
-    level: str | None
+    kind: str | None
 
 
 @dataclass(frozen=True)
@@ -69,7 +75,7 @@ class Inline:
     line: int
     at: datetime
     branch: str | None
-    level: str | None
+    kind: str | None
     args: str
 
 
@@ -82,7 +88,7 @@ class Interrupted:
     line: int
     at: datetime
     branch: str | None
-    level: str | None
+    kind: str | None
 
 
 Launch = Forked | Inline | Interrupted
@@ -102,6 +108,34 @@ def level_of(args: str) -> str | None:
     return words[0].lower() if words and words[0].lower() in LEVELS else None
 
 
+@dataclass(frozen=True)
+class ReviewSkill:
+    """A skill whose run is a code review: the kind of review its launch args name, and how the
+    subagent it forks opens, which is what identifies a review whose launch was never recorded."""
+    kind_of: Callable[[str], str | None]
+    opening: re.Pattern[str]
+
+
+# Every skill whose run is a code review, by the name Claude Code records for it. Adding a review
+# skill is adding its entry here. [LAW:one-source-of-truth]
+REVIEW_SKILLS: Mapping[str, ReviewSkill] = {
+    # Claude Code's built-in. Its kind is its effort level; its fork opens with its target line,
+    # or with the recipe header alone.
+    "code-review": ReviewSkill(level_of, re.compile(rf"\A(?:Review target: `|`(?:{'|'.join(LEVELS)}) effort →)")),
+    # The laws plugin's review has no levels. A plugin skill's fork opens with the skill's directory.
+    "laws:law-review": ReviewSkill(lambda _args: "law review",
+                                   re.compile(r"\ABase directory for this skill: [^\n]*/law-review\n")),
+}
+
+
+def is_review_opening(prompt: str) -> bool:
+    return any(skill.opening.match(prompt) for skill in REVIEW_SKILLS.values())
+
+
+def kind_of(skill: str, args: str) -> str | None:
+    return REVIEW_SKILLS[skill].kind_of(args)
+
+
 def _tool_use_id(row: dict) -> str | None:
     content = (row.get("message") or {}).get("content")
     for b in content if isinstance(content, list) else []:
@@ -111,46 +145,45 @@ def _tool_use_id(row: dict) -> str | None:
 
 
 def skill_calls(rows: Iterable[Row]) -> dict[str, dict]:
-    """The input of every code-review Skill call in a transcript, by tool-use id."""
+    """The input of every review Skill call in a transcript, by tool-use id."""
     calls: dict[str, dict] = {}
     for _, row in rows:
         if row.get("type") != "assistant":
             continue
         for b in (row.get("message") or {}).get("content") or []:
             if (isinstance(b, dict) and b.get("type") == "tool_use" and b.get("name") == "Skill"
-                    and (b.get("input") or {}).get("skill") == "code-review"):
+                    and (b.get("input") or {}).get("skill") in REVIEW_SKILLS):
                 calls[b["id"]] = b["input"]
     return calls
 
 
 @dataclass(frozen=True)
 class ReviewCall:
-    """A code-review Skill call where it was made; its launch record, if any, names its id."""
+    """A review Skill call where it was made; its launch record, if any, names its id."""
     tool_use_id: str
+    skill: str
     path: str
     line: int
     at: datetime
     branch: str | None
-    level: str | None
+    kind: str | None
 
 
 def review_calls(path: str, rows: Iterable[Row]) -> list[ReviewCall]:
-    return [ReviewCall(b["id"], path, line, timestamp(row["timestamp"]), row.get("gitBranch"),
-                       level_of((b.get("input") or {}).get("args", "")))
+    return [ReviewCall(b["id"], skill, path, line, timestamp(row["timestamp"]), row.get("gitBranch"),
+                       kind_of(skill, b["input"].get("args", "")))
             for line, row in rows if row.get("type") == "assistant" and row.get("timestamp")
             for b in (row.get("message") or {}).get("content") or []
             if isinstance(b, dict) and b.get("type") == "tool_use" and b.get("name") == "Skill"
-            and (b.get("input") or {}).get("skill") == "code-review"]
+            and (skill := (b.get("input") or {}).get("skill")) in REVIEW_SKILLS]
 
 
 def launched_call(row: dict) -> str | None:
-    """The tool-use id of the Skill call a code-review launch record answers."""
+    """The tool-use id of the Skill call a review launch record answers."""
     result = row.get("toolUseResult")
-    return _tool_use_id(row) if isinstance(result, dict) and result.get("commandName") == "code-review" else None
+    return _tool_use_id(row) if isinstance(result, dict) and result.get("commandName") in REVIEW_SKILLS else None
 
 
-# How the code-review skill opens the subagent it forks: its target line, or the recipe header alone.
-REVIEW_OPENING = re.compile(r"\A(?:Review target: `|`(?:low|medium|high|xhigh|max) effort →)")
 INTERRUPT_WINDOW = timedelta(seconds=1)
 
 
@@ -163,14 +196,14 @@ def pair_interrupted(calls: Iterable[ReviewCall], unlaunched: Iterable["AgentHea
     """
     candidates = sorted(((head.started - call.at, call, head) for call in calls for head in unlaunched
                          if timedelta(0) <= head.started - call.at <= INTERRUPT_WINDOW
-                         and REVIEW_OPENING.match(head.prompt)), key=lambda c: c[0])
+                         and REVIEW_SKILLS[call.skill].opening.match(head.prompt)), key=lambda c: c[0])
     paired, used_calls, used_heads = [], set(), set()
     for _, call, head in candidates:
         if call.tool_use_id in used_calls or head.agent_id in used_heads:
             continue
         used_calls.add(call.tool_use_id)
         used_heads.add(head.agent_id)
-        paired.append(Interrupted(head.agent_id, call.path, call.line, call.at, call.branch, call.level))
+        paired.append(Interrupted(head.agent_id, call.path, call.line, call.at, call.branch, call.kind))
     return paired
 
 
@@ -183,7 +216,7 @@ def _forked_skill_launch(row: dict) -> dict | None:
 
 
 def parse_launch(path: str, line: int, row: dict, calls: Mapping[str, dict]) -> Launch | None:
-    """A code-review launch in any of its three recorded shapes, or None for every other row.
+    """A review launch in any of its three recorded shapes, or None for every other row.
 
     A review is its launch record, never the label on a subagent: foreground runs have no
     label, and an Agent wrapper labelled `/code-review` is not itself a review.
@@ -192,15 +225,17 @@ def parse_launch(path: str, line: int, row: dict, calls: Mapping[str, dict]) -> 
     at = timestamp(row["timestamp"]) if row.get("timestamp") else None
     branch = row.get("gitBranch")
     result = row.get("toolUseResult")
-    if row.get("type") == "user" and isinstance(result, dict) and result.get("commandName") == "code-review" and at:
+    if (row.get("type") == "user" and isinstance(result, dict)
+            and (skill := result.get("commandName")) in REVIEW_SKILLS and at):
         args = (calls.get(_tool_use_id(row) or "") or {}).get("args", "")
         if isinstance(result.get("agentId"), str):
-            return Forked(result["agentId"], path, line, at, branch, level_of(args))
-        return Inline(path, line, at, branch, level_of(args), args)
+            return Forked(result["agentId"], path, line, at, branch, kind_of(skill, args))
+        return Inline(path, line, at, branch, kind_of(skill, args), args)
     typed = _forked_skill_launch(row)
-    if typed and typed.get("skillName") == "code-review" and isinstance(typed.get("agentId"), str) and at:
-        command = (typed.get("description") or "").removeprefix("/code-review")
-        return Forked(typed["agentId"], path, line, at, branch, level_of(command))
+    if (typed and (skill := typed.get("skillName")) in REVIEW_SKILLS
+            and isinstance(typed.get("agentId"), str) and at):
+        command = (typed.get("description") or "").removeprefix(f"/{skill}")
+        return Forked(typed["agentId"], path, line, at, branch, kind_of(skill, command))
     return None
 
 
@@ -216,7 +251,7 @@ def parse_agent_launch(path: str, line: int, row: dict) -> AgentLaunch | None:
 
 # --- targets ---------------------------------------------------------------------------
 
-# What a review was pointed at, by how it finds its PR. `/code-review` takes `<pr#>|<branch>|<path>`;
+# What a review was pointed at, by how it finds its PR. Each review skill takes `<pr#>|<branch>|<path>`;
 # launches also pass commits, ranges and prose, which all mean code in the launching checkout.
 # [LAW:one-type-per-behavior] one type per way of finding the PR, not per spelling.
 
@@ -248,13 +283,16 @@ class CheckoutTarget:
 
 Target = PrTarget | BranchOrPathTarget | PathTarget | CheckoutTarget
 
-REVIEW_TARGET = re.compile(r"\AReview target: `(.*?)`", re.S)
+# The line a forked review's first message states its target on. The built-in opens with
+# "Review target: `...`"; the law review's body carries it below its header, with a gloss
+# before the colon.
+REVIEW_TARGET = re.compile(r"^Review target[^`\n]*: `(.*?)`", re.S | re.M)
 PR_REFERENCE = re.compile(r"(?:PR\s*#?|#|https?://\S+?/pull/)?(\d+)\b", re.I)
 
 
 def review_target_text(first_row: dict) -> str:
     """The target a forked review was handed, from its own first message; empty when it was handed none."""
-    match = REVIEW_TARGET.match(text_of(first_row))
+    match = REVIEW_TARGET.search(text_of(first_row))
     return match.group(1) if match else ""
 
 

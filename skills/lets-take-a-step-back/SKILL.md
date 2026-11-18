@@ -67,8 +67,8 @@ When the trouble is in the ticket you are working, which is the usual case, find
 commit where that ticket started: the point where its branch diverged from its base
 (`git merge-base <base> HEAD`, with `<base>` the branch the PR targets). Every change
 after that commit is discarded. Nothing is judged commit by commit, and nothing is kept
-but the lesson from step 2. Note the ticket's place too — its epic, lane, topic, and
-dependency edges — because the new ticket takes that place.
+but the lesson from step 2. Note the ticket's place too — its epic, lane, topic, type,
+priority, labels, and dependency edges — because the new ticket takes that place.
 
 When you are handed a wider scope (several tickets, a range of commits, the last few
 days), you are investigating, and the scope is where to look, not where to go back to.
@@ -77,17 +77,16 @@ out every sound change in the window along with the wrong ones, before anything 
 assessed. Find the root causes first (step 2), each with the ticket that made it and the
 commit where that ticket started. Then decide, for each, what restarts:
 
-- **Accidental complexity from a decision:** the ticket that made it restarts.
-- **A goal not worth reaching:** the ticket is closed, not restarted
-  (`lit close <id> --resolution wontfix`), and its branch deleted. Say why in your
-  report.
-- **Work built on a restarted or closed ticket** goes with it: its ticket restarts too,
-  or closes if the goal it served is gone. Nothing is kept that was built on a
-  foundation that is changing or gone.
+- **A root cause in the ticket:** the ticket that made it restarts, toward whatever
+  direction step 2 found.
+- **Work built on a restarted ticket** restarts with it, planned against the new
+  design; the restarted ticket's lesson is not its lesson. Nothing is kept that was
+  built on a foundation that is changing.
 - **Essential complexity:** nothing restarts.
 
 Nothing is deleted before that verdict. Each ticket that restarts then goes through
-steps 3 to 5 on its own, in the worktree that holds its branch.
+steps 3 to 5 on its own, in the worktree that holds its branch, blockers first, so
+each copied edge can point at the replacement when its other end restarted too.
 
 ## 2. Find the root cause
 
@@ -139,17 +138,20 @@ forces a workaround at every later step loses to one that costs more up front an
 flat. For each decision in the plan, ask how hard it will be to change later, and prefer
 the one that stays cheap to change.
 
-In a lit repo, the new ticket takes the old one's place: same epic, lane and topic,
-ranked directly below the old one, with the same dependency edges. The place carries
-over; the words do not. Do all of it before the purge, which drops the old ticket's
-edges and would set free whatever it was blocking:
+In a lit repo, the new ticket takes the old one's place: same epic, lane, topic, type,
+priority and labels, ranked directly below the old one, with the same dependency edges,
+and named wherever another ticket named the old one. The place carries over; the words
+do not. Do all of it before the purge, which drops the old ticket's edges and would set
+free whatever it was blocking:
 
 ```
-lit new --parent <epic> --lane <lane> --topic <topic> --title <title> \
+lit new --parent <epic> --lane <lane> --topic <topic> --type <type> \
+  --priority <priority> --labels <labels> --title <title> \
   --description-file <goal-file> --plan-file <plan-file>
 lit rank <new-id> --below <old-id>
 lit dep add <new-id> --blocked-by <x>    # for each ticket the old one waited on
 lit dep add <y> --blocked-by <new-id>    # for each ticket that waited on the old one
+lit ls --format yaml | grep <old-id>     # change the id to <new-id> in each ticket it finds
 ```
 
 ## 4. Delete the old attempt
@@ -172,7 +174,8 @@ of it is left in git, you do not read.
 
 If the ticket has already been merged, branch from the current base instead, and make
 reversing it the new plan's first step: `git revert` the commit that landed it, and the
-commits that landed the work built on it, without opening their diffs.
+commits that landed the work built on it, without opening their diffs. Resolve any
+conflict in favor of the current base; read the conflict, not the old work.
 
 ## 5. Build from the plan
 
@@ -204,4 +207,5 @@ the same, good.
   PR, or that there was an attempt. It takes the old ticket's place in the backlog.
 - **Delete the old branch, local and remote, and purge the old ticket.** No history
   rewriting.
-- **Plan for the lowest total complexity,** the area under the curve.
+- **Plan for the lowest total complexity,** the area under the curve. Prefer the
+  decision that stays cheap to change.

@@ -79,10 +79,9 @@ commit where that ticket started. Then decide, for each, what restarts:
 
 - **A root cause in the ticket:** the ticket that made it restarts, toward whatever
   direction step 2 found.
-- **Work built on a restarted or dropped ticket** restarts with it, planned against the
-  new design, or is dropped with it when it served only that goal; the restarted
-  ticket's lesson is not its lesson. Nothing is kept that was
-  built on a foundation that is changing or gone.
+- **Work built on a restarted ticket** restarts with it, planned against the new
+  design; the restarted ticket's lesson is not its lesson. Nothing is kept that was
+  built on a foundation that is changing.
 - **Essential complexity:** nothing restarts.
 
 Nothing is deleted before that verdict. Each ticket that restarts then goes through
@@ -101,8 +100,7 @@ Name the decision, and say why it went wrong. It is usually one of these:
   requirement that turned out untrue.
 - **A misguided goal:** the goal as stated isn't worth reaching, and the right move is
   a different direction. Choose the direction you would take, restart toward it, and
-  say in your report what you redirected and why. If no direction is worth taking,
-  the old attempt is deleted (step 4) with no new ticket, and your report says why.
+  say in your report what you redirected and why.
 - **A small implementation decision that cascaded:** where a piece of state lives,
   which layer makes a decision, a type that admits more than it should.
 

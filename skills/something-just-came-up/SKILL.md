@@ -1,6 +1,24 @@
 ---
 name: something-just-came-up
-description: Park the ticket you are on and file the real fix instead. Use when work in progress hits the fork between adding one more mode to a local minimum — small, nothing strictly worse, one more stake in the carrying-cost pile — and the real fix, which does not fit in this session. Parks the current ticket with a single pointer comment, writes the escape up as a top-ranked epic or ticket (proof the minimum is actually escaped, law compliance across the blast radius, the parked work smoothed into a reusable block), grooms both ends so the top is pullable cold and the parked work resumes after it, then hands off to a fresh session. Triggers — "something just came up", "park this and file the real fix", "this needs a bigger fix than the ticket", "we are in a local minimum", "stop and write this up instead".
+description: >-
+  Use the moment any one of these happens while working a ticket, on its first
+  occurrence. A check the ticket must pass fails for a reason outside the
+  ticket's own design. Two declarations of one fact contradict each other (a role
+  table and a column's requirements, a config and its schema). The fix you are
+  weighing adds a mode, flag or special case, or widens a rule, permission or
+  fallback until the contradiction stops showing. You are about to recommend a
+  workaround, or offer the user a choice of how to get past the problem. You are
+  about to file it as a follow-up, or as another area's problem, while this ticket
+  still depends on it. A workaround is never acceptable, however small: it hides
+  the cause and leaves two maps of one fact that will drift
+  [LAW:one-source-of-truth]; it is one more mode every later change must route
+  around [LAW:no-mode-explosion]; its price is paid by every future task, not
+  this one [LAW:carrying-cost]; and the fix that stops the symptom is the local
+  minimum itself [LAW:escape-local-minima]. The only way past is the real fix,
+  the one that removes the cause. Skip this skill only when that real fix is one
+  you can state in a sentence and finish before your next message; then do it
+  inline. Otherwise this skill parks the current ticket and files the real fix as
+  its own work.
 ---
 
 # Something Just Came Up

@@ -85,8 +85,9 @@ commit where that ticket started. Then decide, for each, what restarts:
 - **Essential complexity:** nothing restarts.
 
 Nothing is deleted before that verdict. Each ticket that restarts then goes through
-steps 3 to 5 on its own, in the worktree that holds its branch, blockers first, so
-each copied edge can point at the replacement when its other end restarted too.
+steps 3 and 4 on its own, in the worktree that holds its branch, blockers first, so
+each copied edge can point at the replacement when its other end restarted too. Build
+them (step 5) once every old attempt is gone.
 
 ## 2. Find the root cause
 
@@ -99,7 +100,8 @@ Name the decision, and say why it went wrong. It is usually one of these:
   requirement that turned out untrue.
 - **A misguided goal:** the goal as stated isn't worth reaching, and the right move is
   a different direction. Choose the direction you would take, restart toward it, and
-  say in your report what you redirected and why.
+  say in your report what you redirected and why. If no direction is worth taking,
+  the old attempt is deleted (step 4) with no new ticket, and your report says why.
 - **A small implementation decision that cascaded:** where a piece of state lives,
   which layer makes a decision, a type that admits more than it should.
 
@@ -139,9 +141,8 @@ flat. For each decision in the plan, ask how hard it will be to change later, an
 the one that stays cheap to change.
 
 In a lit repo, the new ticket takes the old one's place: same epic, lane, topic, type,
-priority and labels, ranked directly below the old one, with the same dependency edges,
-and named wherever another ticket named the old one. The place carries over; the words
-do not. Do all of it before the purge, which drops the old ticket's edges and would set
+priority and labels, ranked directly below the old one, with the same dependency edges.
+The place carries over; the words do not. Do all of it before the purge, which drops the old ticket's edges and would set
 free whatever it was blocking:
 
 ```
@@ -151,7 +152,7 @@ lit new --parent <epic> --lane <lane> --topic <topic> --type <type> \
 lit rank <new-id> --below <old-id>
 lit dep add <new-id> --blocked-by <x>    # for each ticket the old one waited on
 lit dep add <y> --blocked-by <new-id>    # for each ticket that waited on the old one
-lit ls --format yaml | grep <old-id>     # change the id to <new-id> in each ticket it finds
+lit dep add <new-id> --related-to <z>    # for each ticket the old one was related to
 ```
 
 ## 4. Delete the old attempt
@@ -164,7 +165,7 @@ ticket, and start the new one:
 git switch --discard-changes -c <new-branch> <ticket-start-commit>
 git clean -fd
 git branch -D <old-branch>
-git push origin --delete <old-branch>   # if it was pushed; this closes its PR
+git push origin --delete <old-branch>   # if it is on the remote; this closes its PR
 lit purge <old-id> --yes
 lit start <new-id>
 ```
@@ -173,16 +174,19 @@ The branch is deleted, not scrubbed: no history rewriting, no reflog expiry. Wha
 of it is left in git, you do not read.
 
 If the ticket has already been merged, branch from the current base instead, and make
-reversing it the new plan's first step: `git revert` the commit that landed it, and the
-commits that landed the work built on it, without opening their diffs. Resolve any
-conflict in favor of the current base; read the conflict, not the old work.
+reversing it the new plan's first step: `git revert --no-commit` the commit that landed
+it, and the commits that landed the work built on it, without opening their diffs.
+Resolve each conflict so the reverted change is gone; read the conflict, not the old
+work. Commit with a message that states what the new plan removes, not the reverted
+commits' subjects, which would put the old attempt in the new branch's log.
 
 ## 5. Build from the plan
 
 Build from the new ticket's plan alone. The old attempt is not read in any way: not
 `git log`, `git show` or `git diff` of its commits, not the reflog, not the closed PR or
 its review comments, not a search of the old session's transcript, not a note or memory
-written about it.
+written about it. Nor do you write one: a handoff, journal entry or memory written
+after the restart names the new ticket and branch, and says nothing of the attempt.
 
 The thought will come mid-way through: *"That function on the old branch was fine.
 It's still in the reflog — I'll just look at how I did it."* That glance is how the old

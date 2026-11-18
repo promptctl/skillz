@@ -29,9 +29,8 @@ skill.
 
 The skill runs from trigger to restarted work without stopping to ask. You will reach
 the deletions and think *"This deletes a branch and purges a ticket — I should check
-with Brandon first."* Running this skill is that check, already answered. The commits
-stay in git's history, and the purge is what he asked for. Do the deletions and keep
-going.
+with Brandon first."* Running this skill is that check, already answered. The purge is
+permanent, and permanent is what he asked for. Do the deletions and keep going.
 
 ## When to run it
 
@@ -68,8 +67,8 @@ When the trouble is in the ticket you are working, which is the usual case, find
 commit where that ticket started: the point where its branch diverged from its base
 (`git merge-base <base> HEAD`, with `<base>` the branch the PR targets). Every change
 after that commit is discarded. Nothing is judged commit by commit, and nothing is kept
-but the lesson from step 2. Note the ticket's place too — its epic, lane, the ticket
-ranked after it, and its dependency edges — because the new ticket takes that place.
+but the lesson from step 2. Note the ticket's place too — its epic, lane, topic, and
+dependency edges — because the new ticket takes that place.
 
 When you are handed a wider scope (several tickets, a range of commits, the last few
 days), you are investigating, and the scope is where to look, not where to go back to.
@@ -88,7 +87,7 @@ commit where that ticket started. Then decide, for each, what restarts:
 - **Essential complexity:** nothing restarts.
 
 Nothing is deleted before that verdict. Each ticket that restarts then goes through
-steps 3 to 5 on its own.
+steps 3 to 5 on its own, in the worktree that holds its branch.
 
 ## 2. Find the root cause
 
@@ -140,16 +139,24 @@ forces a workaround at every later step loses to one that costs more up front an
 flat. For each decision in the plan, ask how hard it will be to change later, and prefer
 the one that stays cheap to change.
 
-In a lit repo, the new ticket takes the old one's place: same epic and lane, ranked
-directly below the old one before the purge (`lit rank <new> --below <old>`), with the
-same dependency edges. The place carries over; the words do not. Create it with
-`lit new --parent <epic> --lane <lane> --plan-file <file>`.
+In a lit repo, the new ticket takes the old one's place: same epic, lane and topic,
+ranked directly below the old one, with the same dependency edges. The place carries
+over; the words do not. Do all of it before the purge, which drops the old ticket's
+edges and would set free whatever it was blocking:
+
+```
+lit new --parent <epic> --lane <lane> --topic <topic> --title <title> \
+  --description-file <goal-file> --plan-file <plan-file>
+lit rank <new-id> --below <old-id>
+lit dep add <new-id> --blocked-by <x>    # for each ticket the old one waited on
+lit dep add <y> --blocked-by <new-id>    # for each ticket that waited on the old one
+```
 
 ## 4. Delete the old attempt
 
 Cut the new branch from the commit where the ticket started, dropping everything
 uncommitted, then delete the old branch locally and on the remote, then purge the old
-ticket:
+ticket, and start the new one:
 
 ```
 git switch --discard-changes -c <new-branch> <ticket-start-commit>
@@ -157,14 +164,15 @@ git clean -fd
 git branch -D <old-branch>
 git push origin --delete <old-branch>   # if it was pushed; this closes its PR
 lit purge <old-id> --yes
+lit start <new-id>
 ```
 
-The branch is deleted, not scrubbed: no history rewriting, no reflog expiry. Its
-commits survive in git, and you do not read them.
+The branch is deleted, not scrubbed: no history rewriting, no reflog expiry. Whatever
+of it is left in git, you do not read.
 
 If the ticket has already been merged, branch from the current base instead, and make
-reversing it the new plan's first step: `git revert` its merge commit, and the merges of
-the work built on it, without opening their diffs.
+reversing it the new plan's first step: `git revert` the commit that landed it, and the
+commits that landed the work built on it, without opening their diffs.
 
 ## 5. Build from the plan
 

@@ -1,77 +1,80 @@
 ---
 name: validate-ticket
-description: Check a ticket before anyone starts work on it, in a separate agent that neither wrote the ticket nor will build it. Finds the need the ticket exists to serve, then tests the ticket against it - whether reaching the target meets the need, whether each acceptance criterion names what the user of the work can rely on afterward, and whether every factual claim the ticket makes about the code, data or tools is true. Returns PASS or FAIL; each problem comes with its evidence and what the ticket should say instead. On FAIL, the caller repairs the ticket and runs this again on the repaired version before handing it on. Use when the user says "validate this ticket", "check the ticket before we start", "is this ticket sound", "sanity-check the ticket", or before handing a ticket to an implementing agent.
+description: Check a ticket before anyone starts work on it, in a separate agent that neither wrote the ticket nor will build it. Finds the need the ticket exists to serve, then tests the ticket against it - whether reaching the target meets the need, whether the acceptance criteria name what the user of the work can rely on afterward, and whether every factual claim the ticket makes about the code, data or tools is true. Returns READY or NOT READY, each problem with its evidence and what the ticket should say instead, or COULD NOT CHECK when the ticket cannot be read. On NOT READY, the caller repairs the ticket and runs this again on the repaired version before handing it on. Use when the user says "validate this ticket", "check the ticket before we start", "is this ticket sound", "sanity-check the ticket", or before handing a ticket to an implementing agent.
 argument-hint: "<ticket id>"
 context: fork
 ---
 
 # Validate a ticket
 
-You are checking a ticket that someone else wrote and someone else will build:
-`$ARGUMENTS`. The implementing agent takes every word of it as given. A false
-premise or a misaimed criterion does not slow that agent down. It steers the agent,
-and the error first shows up in code review, once all the code has been written. You
-are the last cheap place to catch it.
+You are checking the ticket `$ARGUMENTS` before an agent starts building it. That
+agent will take every word of the ticket as given. A false premise or a misaimed
+criterion does not slow it down. It steers it, and the error first shows up in code
+review, once all the code has been written. You are the last cheap place to catch it.
 
-Treat the ticket as a map someone drew without walking the ground. Your job is to
-walk the ground before anyone follows it.
+The ticket is a map someone drew without walking the ground. You walk the ground.
 
-**You change nothing.** Not the ticket, not its plan, not the code. You do not
-start the work. You return a report, and the caller fixes the ticket. A ticket you
-fixed yourself would go to work with nobody independent having checked the fix.
+**You change nothing.** Not the ticket, its plan, the code, the data or the tracker.
+You do not start the work, and you do not record your verdict anywhere. You return a
+report and the caller acts on it. A ticket you repaired yourself would go to work with
+nobody independent having checked the repair. When you run a command to check
+something, run one that only reads.
 
-## 1. Read the whole ticket
+## 1. Read the ticket
 
-Read the description, plan, comments, parent and dependencies. In a repo that uses
-lit, `lit show <id>` prints all of these. If the ticket names earlier tickets, or
-restarts an earlier attempt, read those too. Acceptance criteria are often copied
-forward from them, and step 4 needs to know which ones were.
+If `$ARGUMENTS` names no ticket, or the ticket cannot be read, stop and return
+`COULD NOT CHECK` with the reason. Do not pick a ticket yourself. A guessed ticket's
+verdict looks just like a real one to the caller.
+
+Read the description, plan, comments and parent. In a repo that uses lit, `lit show
+<id>` prints whichever of those the ticket has, and `lit dep ls <id>` lists what blocks the ticket and what it
+blocks. Read the blocking tickets and the blocked ones too. The acceptance criteria
+usually sit under a heading like "Done when", in the description, the plan or both. All
+of them count. Where two disagree, the implementer may follow either one, so test both.
 
 ## 2. Find the need
 
-Find why this ticket exists. The answer is in what depends on it: the epic it belongs
-to, the tickets it blocks, the later work that will use what it produces, or the
-failure a bug report describes. Write the need in one sentence, in terms of whoever
-uses the result: what a person sees, what an agent gets back, what a process can now
-do.
+Find why this ticket exists, in what stands behind it: the user's request recorded on
+the ticket or its epic, the epic's goal, the tickets this one unblocks and what they
+will do with its result, or the failure a bug report describes. Write the need in one
+sentence, in terms of whoever uses the result: what a person sees, what an agent gets
+back, what a process can now do. A source that only says what will be built names no
+need.
 
-Take the need from those sources, not from the ticket's own account of itself. The
-ticket's stated reason is one more claim to check. If what depends on the ticket
-needs something different from what the ticket says it is for, that is a finding.
-
-If you cannot find a need anywhere, the ticket fails. There is nothing to test the
-target against, and the ticket should say why it exists.
+Where the ticket explains itself, that explanation is one more claim. Check it
+against those sources.
 
 ## 3. Test the target against the need
 
 Picture the cheapest result that hits the target exactly as written. Does the user of
-the work then have what they need? If the target can be reached while the need stays
-unmet, the target missed the point.
+the work then have what they need?
 
-## 4. Test each acceptance criterion
+## 4. Test the acceptance criteria
 
-A criterion is sound when it names something the user of the work can rely on once
-it is done. Test each one:
+Each criterion should name something the user of the work can rely on afterward. It
+fails when it names how to build the work instead: a function, a type, a file layout,
+a sequence of steps. A criterion like that is met whenever the work is built that way,
+whether or not the need is met.
 
-- **Does it dictate how to build the work?** A criterion that names a function, type,
-  file layout or sequence of steps says how to build the work, not what it delivers.
-  It passes when the work is built that way, whether or not the need is met.
-- **Does it only demand sameness with the old behavior?** That holds only when
-  sameness is what the user relies on: a port, a speedup, two implementations that
-  must agree. Otherwise it carries the old defects forward and passes an empty change.
-- **Would an empty change pass it?** Check it against the code as it is today. A
-  criterion the current code already meets marks nothing as done.
-- **Was it carried over from an earlier ticket?** Criteria copied forward are often
-  too low-level, and often simply wrong. They may come from the very attempt that
-  failed. A carried-over criterion gets no credit for having been there before. Test
-  it against this ticket's need as if it were new.
+Then test the criteria as a set, two ways:
 
-Then test the criteria as a set: if every one passes, is the need met? A need that no
-criterion covers is a finding.
+- **Against an empty change.** Would the code the work starts from meet every
+  criterion?
+  One criterion that already holds is fine, since it guards something the work must
+  not break. A set that already holds marks nothing as done.
+- **Against a build that misses the need.** Picture work that meets every criterion
+  and still leaves the need unmet. If you can, the set is wrong. This catches a
+  criterion that only demands the old behavior. Matching the old behavior is sound
+  only when the match is itself what the user relies on, as in a port or a speedup.
 
-- BAD: "`load_config` returns a `ConfigResult` instead of `None`." (dictates the build)
+Give no criterion credit for having appeared before. Criteria copied forward from an
+earlier ticket are often too low-level, and often wrong for this one. Judge each one
+against this ticket's need as if it were new. Do not go looking for the earlier
+attempt; the criterion itself is what you judge.
+
+- BAD: "`load_config` returns a `ConfigResult` instead of `None`." (names the build)
 - BAD: "Output matches the current implementation on all existing fixtures." (an empty
-  change passes it)
+  change meets it)
 - GOOD: "Starting the service with a missing config file exits non-zero and the error
   names the missing path."
 
@@ -82,50 +85,70 @@ claims it assumes without stating them. "Handle the case where `load_user` retur
 None" claims that `load_user` can return None. "Extend the retry mechanism" claims
 there is one and that it works the way the ticket expects.
 
-Check each claim against the code itself. Read the source, search it, or run anything
-that only reads. Mark each claim **true**, **false** or **unchecked**, and give your
-evidence: a file, a command and its output, or the reason you could not check it.
+Check each claim against the thing it describes. Read and search the code, query the
+data, read the tool's help or run it in a way that only reads. Mark each claim
+**true**, **false** or **unchecked**, and give your evidence: a file, a command and
+its output, or the reason you could not check it.
 
-**An unchecked claim is never reported as true.** The moment this breaks is late in
-the run. A claim will be awkward to verify, and you will think *"this is obviously
-how it works."* That was the author's thought too, and it is how a false claim reached
-the ticket. Check it, or mark it unchecked.
+A claim about something a blocking ticket will build is checked against that ticket's
+acceptance criteria, not against today's code. The ticket is right to point at a world
+that does not exist yet.
 
-If the target or a criterion depends on an unchecked claim, the ticket fails. The
-ticket should state that point as an open question the work must answer first. An
-unchecked claim nothing depends on is listed, and does not fail the ticket.
+**An unchecked claim is never reported as true.** The moment this breaks comes late in
+the run. A claim will be awkward to verify, and you will think *"this is obviously how
+it works."* That was the author's thought too, and it is how a false claim got into
+the ticket. Walk the ground or mark it unchecked.
 
 ## 6. Report
 
-You are done when every criterion has been tested and every claim is marked, each
-with evidence. Then return:
+You are done when the need is written down with its source, the target has been
+tested against it, the criteria have been tested one by one and as a set, and every
+claim is marked with its evidence.
+
+A finding is one of these, and nothing else:
+
+- **no need**: you found no need behind the ticket, so there is nothing to test it
+  against.
+- **wrong need**: the need the ticket states is not the one its sources show.
+- **target misses need**: the cheapest result that hits the target leaves the need
+  unmet.
+- **criterion names the build**: a criterion says how to build the work, not what the
+  user can rely on.
+- **criteria miss the need**: an empty change, or a build that misses the need, meets
+  every criterion.
+- **false claim**: anything the ticket asserts or assumes that is not true.
+- **unchecked claim**: a claim you could not check, where the target or a criterion
+  would change if the claim were false. A ticket that states the point as an open
+  question, for the work to answer first, is not making a claim there.
+
+A problem that fits several kinds is one finding, filed under the kind closest to its
+cause. Wording, size, priority and taste are not findings. A sound ticket is READY. A padded
+NOT READY sends a good ticket back for a rewrite it did not need.
+
+Return:
 
 ```
-VERDICT: PASS | FAIL
+VERDICT: READY | NOT READY | COULD NOT CHECK <reason>
+Checked: <ticket id>, as read at <UTC time>
 
-Need: <one sentence, and where you found it>
+Need: <one sentence> (source: <where you found it>)
 
 Findings:
-1. <kind: missing need | target misses need | criterion | false claim | unchecked claim>
-   Ticket says: <quote>
-   Evidence: <file, command output, the dependent ticket>
+1. <kind>
+   About: <the ticket text quoted, or the text that assumes the claim, or "nothing - absent">
+   Evidence: <file, command and output, the related ticket>
    Ticket should say: <the need or the fact>
 
 Claims:
 - <claim> - true | false | unchecked - <evidence>
 ```
 
-The verdict is PASS only when there are no findings. Report only the three failures
-this check exists for: a target that misses the need, a criterion that fails step 4,
-and a claim that is false or unchecked where the work depends on it. Wording, size and
-priority are not findings. A sound ticket passes. A padded FAIL sends a good ticket
-back for a rewrite it did not need.
+The verdict is READY only when there are no findings.
 
 **"Ticket should say" gives what is needed or what is true. The build is left to the
-implementer.** By now
-you know the code well, and you will want to write down the fix you would make. Hold
-it back. A need stated precisely leaves the implementer room to choose the build, and
-it carries none of your guesses into the next ticket.
+implementer.** By now you know the code well, and you will want to write down the fix
+you would make. Hold it back. A need stated precisely leaves the implementer room to
+choose the build, and it carries none of your guesses into the next ticket.
 
 - BAD: "Ticket should say: wrap `fetch()` in a retry loop with three attempts."
 - GOOD: "Ticket should say: the nightly sync runs unattended and must finish when the

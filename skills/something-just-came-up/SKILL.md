@@ -102,7 +102,8 @@ The pin carries at most:
 - the files in play, at file granularity and no finer (function names and line numbers
   are pointers into a moving artifact — the reference ceiling in `groom-backlog`
   applies here too)
-- the id of the work that parked it, so the resumer knows what changed underneath
+- the id of the work that parked it, so the resumer knows what changed underneath,
+  cited as `[LAW:escape-local-minima]`
 - the one question you were in the middle of answering, if there was one
 
 Nothing else. No status report, no what-works list, no session summary.
@@ -120,9 +121,9 @@ any of them — and by the time it reads this, the branch may not exist.
 
 GOOD:
 
-> Parked for #proj-resolver-9x2. Work stops at branch `resolver-mode-4`, pushed,
-> nothing merged. In play: `config/resolver.py`, `tests/test_resolver.py`. Resume once
-> that epic lands and its blocks edge lifts.
+> Parked for #proj-resolver-9x2 [LAW:escape-local-minima]. Work stops at branch
+> `resolver-mode-4`, pushed, nothing merged. In play: `config/resolver.py`,
+> `tests/test_resolver.py`. Resume once that epic lands and its blocks edge lifts.
 
 ## 2. Write up the something
 
@@ -151,7 +152,9 @@ Without strand 1 nothing distinguishes escaping the minimum from relocating it, 
 relocating is the usual outcome — the new shape absorbs the old pain, everyone declares
 victory, and the mode after next goes in by hand anyway.
 
-Rank it to the top: `--top` at creation, or `lit rank <id> --top`.
+Rank it to the top and label it: `--top --labels escape-local-minima` at creation, and
+cite `[LAW:escape-local-minima]` in its description. The label is how the pattern is
+found again and counted wherever it recurs.
 
 **File it outside the parked ticket's epic** — its own epic, or another one. Inside
 one epic, rank is lit's ordering signal and a blocks edge between siblings is refused
@@ -180,9 +183,10 @@ park broken:
 - `lit dep add <parked-id> --blocked-by <new-id>`. This holds it back
   while the escape is in flight, and lifts on its own when the new work closes — which
   is what makes "resume afterwards" true rather than hopeful. If the escape ended up
-  inside the parked ticket's epic anyway, lit refuses this edge (`code=3`, siblings);
-  rank the escape above it instead — `lit rank <new-id> --above <parked-id>` — and know
-  what you traded: rank orders the lane, it does not gate it.
+  inside the parked ticket's epic anyway, lit refuses this edge (`code=3`, siblings):
+  move the escape out — `lit parent set --child <new-id> --parent <other-epic>` — and
+  add the edge again. Rank between siblings orders the lane but does not gate it, so it
+  is not a park.
 - `lit comment add <parked-id> --body "..."` — post the pin you drafted in step 1, now
   that `<new-id>` exists.
 - `lit update <parked-id> --description "..."` — rewrite its acceptance criteria against
@@ -192,8 +196,8 @@ park broken:
   this is not where the no-claims rule bites.
 
 **Then read the park back before you go on.** `lit dep ls <parked-id> --type
-blocked-by` must print `<parked-id> blocked by <new-id>`; anything else means the edge
-did not land. Then run `lit next`, and read it knowing what a
+blocked-by` must include the line `<parked-id> blocked by <new-id>`; without it, the
+edge did not land. Then run `lit next`, and read it knowing what a
 *good* park looks like: it names the **new work** as the next thing to start, because
 it *"gates <parked-id>, which is on your path"* (behind an epic, it names the epic's
 first child). The lane is still claimed by this checkout (reopening clears
@@ -203,8 +207,9 @@ land first.
 A `lit next` that names **the parked ticket** is the failure. *"Already in progress in
 a lane you hold"* means the reopen did not take; the parked ticket shown `open` means
 the edge did not land. All three states exit 0, so read which ticket it names, not the
-exit code. Do not "fix" a good park because lit routed away from the parked ticket —
-routing away is the park working.
+exit code. On a failure, repair the command that did not take and read the park back
+again; the bottle waits until it passes. Do not "fix" a good park because lit routed
+away from the parked ticket — routing away is the park working.
 
 Check this before you go on, every time. You cleared `in_progress` in the first command
 of this step, so a refusal or typo in the second leaves the ticket loose with nothing

@@ -102,7 +102,8 @@ The pin carries at most:
 - the files in play, at file granularity and no finer (function names and line numbers
   are pointers into a moving artifact — the reference ceiling in `groom-backlog`
   applies here too)
-- the id of the work that parked it, so the resumer knows what changed underneath
+- the id of the work that parked it, so the resumer knows what changed underneath,
+  cited as `[LAW:escape-local-minima]`
 - the one question you were in the middle of answering, if there was one
 
 Nothing else. No status report, no what-works list, no session summary.
@@ -120,13 +121,13 @@ any of them — and by the time it reads this, the branch may not exist.
 
 GOOD:
 
-> Parked for #proj-resolver-9x2. Work stops at branch `resolver-mode-4`, pushed,
-> nothing merged. In play: `config/resolver.py`, `tests/test_resolver.py`. Resume once
-> that epic lands and its blocks edge lifts.
+> Parked for #proj-resolver-9x2 [LAW:escape-local-minima]. Work stops at branch
+> `resolver-mode-4`, pushed, nothing merged. In play: `config/resolver.py`,
+> `tests/test_resolver.py`. Resume once that epic lands and its blocks edge lifts.
 
 ## 2. Write up the something
 
-`laws:backlog` governs the slate — read it when the writeup runs past a couple of
+`backlog` governs the slate — read it when the writeup runs past a couple of
 tickets. The shape is whatever the work actually is: one ticket with an acceptance
 criterion, or an epic with children. Do not inflate a ticket into an epic for
 ceremony, and do not crush a real epic into one ticket to look decisive.
@@ -151,9 +152,12 @@ Without strand 1 nothing distinguishes escaping the minimum from relocating it, 
 relocating is the usual outcome — the new shape absorbs the old pain, everyone declares
 victory, and the mode after next goes in by hand anyway.
 
-Rank it to the top: `--top` at creation, or `lit rank <id> --top`.
+Rank it to the top and label it: `--top --labels escape-local-minima` at creation, on
+the escape and every child filed under it, and cite `[LAW:escape-local-minima]` in its
+description. The label is how the pattern is
+found again and counted wherever it recurs.
 
-**File it outside the parked ticket's epic** — its own epic, or free-floating. Inside
+**File it outside the parked ticket's epic** — its own epic, or another one. Inside
 one epic, rank is lit's ordering signal and a blocks edge between siblings is refused
 outright, so filing the escape as a sibling of the work it supersedes costs you the
 mechanism step 3 parks with.
@@ -177,12 +181,13 @@ park broken:
   hold — continue where you left off"*, because lit routes claims-first and an
   in-progress lane this checkout holds outranks rank, blocks edges, and focus alike. The
   park undoes itself in one command, before the fresh agent has read anything.
-- `lit dep add --from <new-id> --to <parked-id> --type blocks`. This holds it back
+- `lit dep add <parked-id> --blocked-by <new-id>`. This holds it back
   while the escape is in flight, and lifts on its own when the new work closes — which
   is what makes "resume afterwards" true rather than hopeful. If the escape ended up
-  inside the parked ticket's epic anyway, lit refuses this edge (`code=3`, siblings);
-  rank the escape above it instead — `lit rank <new-id> --above <parked-id>` — and know
-  what you traded: rank orders the lane, it does not gate it.
+  inside the parked ticket's epic anyway, lit refuses this edge (`code=3`, siblings):
+  move the escape out — `lit parent set --child <new-id> --parent <other-epic>` — and
+  add the edge again. Rank between siblings orders the lane but does not gate it, so it
+  is not a park.
 - `lit comment add <parked-id> --body "..."` — post the pin you drafted in step 1, now
   that `<new-id>` exists.
 - `lit update <parked-id> --description "..."` — rewrite its acceptance criteria against
@@ -191,18 +196,21 @@ park broken:
   right back into the minimum. Full precision here — criteria are forward-pointing, so
   this is not where the no-claims rule bites.
 
-**Then read the park back before you go on**, and read it knowing what a *good* park
-looks like: `lit next` exits nonzero — `code=6`, *"no ready work in your claimed
-lane(s) — blocked on <new-id>"*. That error is the success signal. The lane is still
-claimed by this checkout (reopening clears `in_progress`, not the assignee), and the
-blocks edge is now holding it, so routing has nowhere to go and says so, naming the
-work that must land first.
+**Then read the park back before you go on.** `lit dep ls <parked-id> --type
+blocked-by` must include the line `<parked-id> blocked by <new-id>`; without it, the
+edge did not land. Then run `lit next`, and read it knowing what a
+*good* park looks like: it names the **new work** as the next thing to start, because
+it *"gates <parked-id>, which is on your path"* (behind an epic, it names the epic's
+first child). The lane is still claimed by this checkout (reopening clears
+`in_progress`, not the assignee), and routing follows the edge to the work that must
+land first.
 
-A `lit next` that cheerfully **names a ticket** is the failure. It means either the
-reopen did not take (it names the parked ticket, *"already in progress in a lane you
-hold"*) or the edge did not land (it names the parked ticket as ready). Both broken
-states name a ticket; only the good one errors. Do not "fix" the error by pulling the
-edge — that is tearing out the park because the park worked.
+A `lit next` that names **the parked ticket** is the failure. *"Already in progress in
+a lane you hold"* means the reopen did not take; the parked ticket shown `open` means
+the edge did not land. All three states exit 0, so read which ticket it names, not the
+exit code. On a failure, repair the command that did not take and read the park back
+again; the bottle waits until it passes. Do not "fix" a good park because lit routed
+away from the parked ticket — routing away is the park working.
 
 Check this before you go on, every time. You cleared `in_progress` in the first command
 of this step, so a refusal or typo in the second leaves the ticket loose with nothing
@@ -233,12 +241,6 @@ GOOD:
 > `lit start proj-resolver-9x2.a1` — first child of epic #proj-resolver-9x2, filed just
 > now. Read the epic, then work the child. The ticket it parked is blocked behind it.
 
-**Name the ticket; do not send them to a bare `lit next`.** While the parked lane sits
-blocked behind the new work, `lit next` does not route around it — it exits nonzero
-with *"no ready work in your claimed lane(s)"* and tells the reader to re-focus
-deliberately. Handing a fresh session `/next` opens it on an error. The id is a pin
-like any other, and it is the one pointer this message cannot do without.
-
 Say your one line to the user *before* you fire, not after: the handoff ends your
 turn at the launcher's line.
 
@@ -267,13 +269,10 @@ deliverable.
 - **Commit and push before you pin.** The reset is coming.
 - **Three strands, or the writeup is not scoped.** The escape and its proof, law
   compliance across the blast radius, the parked work smoothed into a block.
-- **Release the claim, then block it.** `lit open <parked-id>`, then `lit dep add
-  --from <new-id> --to <parked-id> --type blocks`. Claims outrank everything, so a
-  parked ticket left `in_progress` is handed straight back to the next session and the
-  blocks edge never gets a word in.
-- **Read the park back before the bottle.** A good park makes `lit next` exit `code=6`
-  naming the new work as the blocker. A `lit next` that names a ticket is the failure —
-  both broken states name one, only the good one errors.
-- **Name the first ticket in the bottle.** A bare `lit next` exits nonzero while the
-  parked lane sits blocked; `/next` opens the fresh session on an error.
+- **Clear `in_progress`, then block it.** Both commands in step 3, as a pair. Claims
+  outrank everything, so a parked ticket left `in_progress` is handed straight back to
+  the next session and the blocks edge never gets a word in.
+- **Read the park back before the bottle.** A good park makes `lit next` name the new
+  work as gating the parked ticket. A `lit next` that names the parked ticket is the
+  failure. Every state exits 0, so read the ticket it names.
 - **Stop at the launcher's line.** You filed the work. You do not start it.

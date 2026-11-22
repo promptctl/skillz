@@ -27,10 +27,16 @@ If `$ARGUMENTS` names no ticket, or the ticket cannot be read, stop and return
 verdict looks just like a real one to the caller.
 
 Read the description, plan, comments and parent. In a repo that uses lit, `lit show
-<id>` prints whichever of those the ticket has, and `lit dep ls <id>` lists what blocks the ticket and what it
-blocks. Read the blocking tickets and the blocked ones too. The acceptance criteria
-usually sit under a heading like "Done when", in the description, the plan or both. All
-of them count. Where two disagree, the implementer may follow either one, so test both.
+<id>` prints whichever of those the ticket has. `lit dep ls <id> --type blocked-by`
+lists the blocking edges in both directions, and the tickets ranked ahead of it in its
+lane (`lit show <epic>` lists the epic's children in order) can block it too. Read the
+blocking tickets and the blocked ones. Any of these you cannot open goes in the
+report's `Not seen:` line. A source you never read must not pass for one that had
+nothing in it.
+
+The acceptance criteria usually sit under a heading like "Done when", in the
+description, the plan or both. All of them count. Where two disagree, the implementer
+may follow either one, so test both.
 
 ## 2. Find the need
 
@@ -44,24 +50,32 @@ need.
 Where the ticket explains itself, that explanation is one more claim. Check it
 against those sources.
 
+If no source gives a need, that is the **no need** finding. Write `Need: none found`,
+skip steps 3 and 4, and still check the claims.
+
 ## 3. Test the target against the need
 
-Picture the cheapest result that hits the target exactly as written. Does the user of
-the work then have what they need?
+The target is the result the ticket asks for: what its title, description and plan
+say will exist when the work is done. Write it in one sentence. Picture the cheapest
+result that hits the target exactly as written. Does the user of the work then have
+what they need?
 
 ## 4. Test the acceptance criteria
 
+A ticket with no acceptance criteria gives the implementer nothing to tell done from
+not done. Report it as **criteria miss the need** and go on to step 5.
+
 Each criterion should name something the user of the work can rely on afterward. It
 fails when it names how to build the work instead: a function, a type, a file layout,
-a sequence of steps. A criterion like that is met whenever the work is built that way,
-whether or not the need is met.
+a sequence of steps. BDD calls this an imperative criterion where a declarative one
+was needed. A criterion like that is met whenever the work is built that way, whether
+or not the need is met.
 
 Then test the criteria as a set, two ways:
 
 - **Against an empty change.** Would the code the work starts from meet every
-  criterion?
-  One criterion that already holds is fine, since it guards something the work must
-  not break. A set that already holds marks nothing as done.
+  criterion? One criterion that already holds is fine, since it guards something the
+  work must not break. A set that already holds marks nothing as done.
 - **Against a build that misses the need.** Picture work that meets every criterion
   and still leaves the need unmet. If you can, the set is wrong. This catches a
   criterion that only demands the old behavior. Matching the old behavior is sound
@@ -90,9 +104,10 @@ data, read the tool's help or run it in a way that only reads. Mark each claim
 **true**, **false** or **unchecked**, and give your evidence: a file, a command and
 its output, or the reason you could not check it.
 
-A claim about something a blocking ticket will build is checked against that ticket's
-acceptance criteria, not against today's code. The ticket is right to point at a world
-that does not exist yet.
+A claim about something an open blocking ticket will build is checked against that
+ticket's acceptance criteria, not against today's code. The ticket is right to point at
+a world that does not exist yet. Once the blocker has closed, its work is in the code,
+and the claim is checked there.
 
 **An unchecked claim is never reported as true.** The moment this breaks comes late in
 the run. A claim will be awkward to verify, and you will think *"this is obviously how
@@ -101,9 +116,10 @@ the ticket. Walk the ground or mark it unchecked.
 
 ## 6. Report
 
-You are done when the need is written down with its source, the target has been
-tested against it, the criteria have been tested one by one and as a set, and every
-claim is marked with its evidence.
+You are done when the need is written down with its source (or `none found`), the
+target has been tested against it, the criteria have been tested one by one and as a
+set, every claim is marked with its evidence, and every source you could not open is
+listed.
 
 A finding is one of these, and nothing else:
 
@@ -114,30 +130,35 @@ A finding is one of these, and nothing else:
   unmet.
 - **criterion names the build**: a criterion says how to build the work, not what the
   user can rely on.
-- **criteria miss the need**: an empty change, or a build that misses the need, meets
-  every criterion.
+- **criteria miss the need**: there are no criteria, or an empty change, or a build
+  that misses the need, meets every criterion.
 - **false claim**: anything the ticket asserts or assumes that is not true.
 - **unchecked claim**: a claim you could not check, where the target or a criterion
   would change if the claim were false. A ticket that states the point as an open
   question, for the work to answer first, is not making a claim there.
 
 A problem that fits several kinds is one finding, filed under the kind closest to its
-cause. Wording, size, priority and taste are not findings. A sound ticket is READY. A padded
-NOT READY sends a good ticket back for a rewrite it did not need.
+cause. Wording, size, priority and taste are not findings. A sound ticket is READY. A
+padded NOT READY sends a good ticket back for a rewrite it did not need.
 
 Return:
 
 ```
 VERDICT: READY | NOT READY | COULD NOT CHECK <reason>
 Checked: <ticket id>, as read at <UTC time>
+Not seen: <each source you could not open, and why - or "nothing">
 
-Need: <one sentence> (source: <where you found it>)
+Need: <one sentence> (source: <where you found it>) | none found
+Target: <one sentence>
+Target test: <the cheapest result that hits the target, and whether it meets the need>
+Empty-change test: <does the starting code meet every criterion?>
+Missed-need test: <a build that meets every criterion and misses the need, or "none found">
 
 Findings:
 1. <kind>
    About: <the ticket text quoted, or the text that assumes the claim, or "nothing - absent">
    Evidence: <file, command and output, the related ticket>
-   Ticket should say: <the need or the fact>
+   Ticket should say: <see below>
 
 Claims:
 - <claim> - true | false | unchecked - <evidence>
@@ -145,12 +166,17 @@ Claims:
 
 The verdict is READY only when there are no findings.
 
-**"Ticket should say" gives what is needed or what is true. The build is left to the
-implementer.** By now you know the code well, and you will want to write down the fix
-you would make. Hold it back. A need stated precisely leaves the implementer room to
-choose the build, and it carries none of your guesses into the next ticket.
+**"Ticket should say" gives what is needed, never how to build it.** Write the need,
+the criterion the user can rely on, or the constraint the work must respect. For a
+false claim, write the true fact only if the work rests on it; otherwise the claim
+should simply go. For an unchecked claim, write the point as an open question the work
+must answer first. Do not add a description of how the code works today. It goes
+stale before the work starts, and the next run will flag it.
+
+By now you know the code well, and you will want to write down the fix you would
+make. Hold it back. A need stated precisely leaves the implementer room to choose the
+build, and it carries none of your guesses into the next ticket.
 
 - BAD: "Ticket should say: wrap `fetch()` in a retry loop with three attempts."
-- GOOD: "Ticket should say: the nightly sync runs unattended and must finish when the
-  upstream API drops a request. Today one dropped request aborts the whole run
-  (`sync/job.py`)."
+- GOOD: "Ticket should say: the nightly sync runs unattended and must finish even when
+  the upstream API drops a request."

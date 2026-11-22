@@ -152,8 +152,9 @@ Without strand 1 nothing distinguishes escaping the minimum from relocating it, 
 relocating is the usual outcome — the new shape absorbs the old pain, everyone declares
 victory, and the mode after next goes in by hand anyway.
 
-Rank it to the top and label it: `--top --labels escape-local-minima` at creation, and
-cite `[LAW:escape-local-minima]` in its description. The label is how the pattern is
+Rank it to the top and label it: `--top --labels escape-local-minima` at creation, on
+the escape and every child filed under it, and cite `[LAW:escape-local-minima]` in its
+description. The label is how the pattern is
 found again and counted wherever it recurs.
 
 **File it outside the parked ticket's epic** — its own epic, or another one. Inside

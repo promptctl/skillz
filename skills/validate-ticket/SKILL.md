@@ -95,7 +95,8 @@ attempt; the criterion itself is what you judge.
 ## 5. Check every factual claim
 
 List every claim the ticket makes about the code, the data or a tool. Include the
-claims it assumes without stating them. "Handle the case where `load_user` returns
+claims it assumes without stating them, and the claims inside a request it quotes,
+since the need rests on those too. "Handle the case where `load_user` returns
 None" claims that `load_user` can return None. "Extend the retry mechanism" claims
 there is one and that it works the way the ticket expects.
 
@@ -170,8 +171,9 @@ The verdict is READY only when there are no findings.
 the criterion the user can rely on, or the constraint the work must respect. For a
 false claim, write the true fact only if the work rests on it; otherwise the claim
 should simply go. For an unchecked claim, write the point as an open question the work
-must answer first. Do not add a description of how the code works today. It goes
-stale before the work starts, and the next run will flag it.
+must answer first. Beyond the one fact the work rests on, do not describe how the
+code works today. A description like that goes stale before the work starts, and the
+next run will flag it.
 
 By now you know the code well, and you will want to write down the fix you would
 make. Hold it back. A need stated precisely leaves the implementer room to choose the

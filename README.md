@@ -31,6 +31,6 @@ Each skill is `skills/<name>/SKILL.md`; the plugin picks up new skill directorie
 | `something-just-came-up` | Park the current ticket and file the real fix as top-ranked work. |
 | `tmux-command` | Send slash commands and keystrokes into another agent's tmux pane. |
 | `tmux-talk` | Hold a conversation with another Claude instance through tmux. |
-| `validate-ticket` | Check a ticket's need, target, acceptance criteria and factual claims in a separate agent before work starts. |
+| `validate-ticket` | Make a ticket ready for implementation: a clear goal, outcome-level acceptance criteria, and parts that agree, fixed in place. |
 
 `tmux-shared/` is not a skill: it holds the tmux addressing scripts `tmux-talk` and `tmux-command` share.

@@ -170,7 +170,8 @@ The verdict is READY only when there are no findings.
 **"Ticket should say" gives what is needed, never how to build it.** Write the need,
 the criterion the user can rely on, or the constraint the work must respect. For a
 false claim, write the true fact only if the work rests on it; otherwise the claim
-should simply go. For an unchecked claim, write the point as an open question the work
+should simply go. A quoted request stays as written, with the true fact beside it.
+For an unchecked claim, write the point as an open question the work
 must answer first. Beyond the one fact the work rests on, do not describe how the
 code works today. A description like that goes stale before the work starts, and the
 next run will flag it.

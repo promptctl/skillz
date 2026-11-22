@@ -126,7 +126,7 @@ GOOD:
 
 ## 2. Write up the something
 
-`laws:backlog` governs the slate — read it when the writeup runs past a couple of
+`backlog` governs the slate — read it when the writeup runs past a couple of
 tickets. The shape is whatever the work actually is: one ticket with an acceptance
 criterion, or an epic with children. Do not inflate a ticket into an epic for
 ceremony, and do not crush a real epic into one ticket to look decisive.
@@ -153,7 +153,7 @@ victory, and the mode after next goes in by hand anyway.
 
 Rank it to the top: `--top` at creation, or `lit rank <id> --top`.
 
-**File it outside the parked ticket's epic** — its own epic, or free-floating. Inside
+**File it outside the parked ticket's epic** — its own epic, or another one. Inside
 one epic, rank is lit's ordering signal and a blocks edge between siblings is refused
 outright, so filing the escape as a sibling of the work it supersedes costs you the
 mechanism step 3 parks with.
@@ -192,7 +192,8 @@ park broken:
   this is not where the no-claims rule bites.
 
 **Then read the park back before you go on.** `lit dep ls <parked-id> --type
-blocked-by` shows the edge itself. Then run `lit next`, and read it knowing what a
+blocked-by` must print `<parked-id> blocked by <new-id>`; anything else means the edge
+did not land. Then run `lit next`, and read it knowing what a
 *good* park looks like: it names the **new work** as the next thing to start, because
 it *"gates <parked-id>, which is on your path"* (behind an epic, it names the epic's
 first child). The lane is still claimed by this checkout (reopening clears
@@ -262,10 +263,9 @@ deliverable.
 - **Commit and push before you pin.** The reset is coming.
 - **Three strands, or the writeup is not scoped.** The escape and its proof, law
   compliance across the blast radius, the parked work smoothed into a block.
-- **Release the claim, then block it.** `lit open <parked-id>`, then `lit dep add
-  <parked-id> --blocked-by <new-id>`. Claims outrank everything, so a parked ticket
-  left `in_progress` is handed straight back to the next session and the blocks edge
-  never gets a word in.
+- **Clear `in_progress`, then block it.** Both commands in step 3, as a pair. Claims
+  outrank everything, so a parked ticket left `in_progress` is handed straight back to
+  the next session and the blocks edge never gets a word in.
 - **Read the park back before the bottle.** A good park makes `lit next` name the new
   work as gating the parked ticket. A `lit next` that names the parked ticket is the
   failure. Every state exits 0, so read the ticket it names.

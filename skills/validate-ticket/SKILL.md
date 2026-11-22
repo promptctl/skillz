@@ -1,6 +1,6 @@
 ---
 name: validate-ticket
-description: Bring a ticket into workable shape before an agent starts on it. Works out what the ticket is for, checks that it has a purpose, a scope and outcome-based acceptance criteria that agree with each other, and edits the ticket to fill or correct whatever is missing, using the ticket's parent, related tickets and the code as sources. Returns READY, UPDATED with the changes, INCOMPLETE with what no source could supply, or COULD NOT CHECK. Use when the user says "validate this ticket", "check the ticket before we start", "clean up this ticket", "is this ticket ready", or before handing a ticket to an implementing agent.
+description: Make a ticket ready for implementation. Confirms the ticket states its goal and that its title, goal and acceptance criteria agree, rewrites acceptance criteria that describe implementation as the outcomes they stand for, and edits the ticket to fix whatever is missing or inconsistent, using related tickets where the ticket itself is unclear. Works from tickets only, never the code. Returns the corrected ticket. Use when the user says "validate this ticket", "clean up this ticket", "get this ticket ready", or before handing a ticket to an implementing agent.
 argument-hint: "<ticket id>"
 context: fork
 ---
@@ -9,69 +9,67 @@ context: fork
 
 Ticket: `$ARGUMENTS`
 
-If `$ARGUMENTS` names no ticket or the ticket cannot be read, return
-`COULD NOT CHECK <reason>`.
+Work from tickets only. Do not read the code.
 
-## 1. Read
+If `$ARGUMENTS` names no ticket or the ticket cannot be read, say so and stop.
 
-Read the ticket in full: title, description, plan, comments. Then read what surrounds
-it: its parent, the tickets it links to, and any request or bug report it quotes.
-These are the sources for every fix in step 3.
+## 1. Goal
 
-## 2. Check
+Read the ticket: title, description, comments. State its goal in one sentence, in
+terms of whoever uses the result: what a person sees, what an agent gets back, what a
+process can now do. "Add X" is a method, not a goal.
 
-A workable ticket has:
+If the ticket doesn't make the goal clear, read its parent and the tickets that
+depend on it. They show what this work is needed for.
 
-- **Title:** names the outcome, not the method.
-- **Purpose:** why the work is needed, in terms of whoever uses the result: what a
-  person sees, what an agent gets back, what a process can now do. "Add X" is a
-  method, not a purpose.
-- **Scope:** what changes, and where the work stops.
-- **Acceptance criteria:** conditions that tell done from not done. Each one describes
-  an outcome the user of the work can rely on, not an implementation detail (a
-  function, type, file layout or sequence of steps). The set as a whole is not
-  already met by the code as it stands, and cannot be met by work that leaves the
-  purpose unmet. Criteria carried over from an earlier ticket get no credit for it;
-  judge them against this ticket's purpose.
-- **Consistency:** the title, purpose, scope and criteria describe the same piece of
-  work. The scope serves the purpose, the criteria cover the scope, and no two parts
-  contradict.
-- **References that resolve:** files, functions, commands and tickets the ticket names
-  exist under those names.
+The goal you write is the one those sources give. Restate it; do not broaden, narrow
+or replace it.
 
-- BAD criterion: "`load_config` returns a `ConfigResult` instead of `None`."
-- BAD criterion: "Output matches the current implementation on all existing fixtures."
-- GOOD criterion: "Starting the service with a missing config file exits non-zero and
-  the error names the missing path."
+If no ticket states or implies a goal, return the ticket unchanged and say the goal
+is missing.
 
-## 3. Fix
+## 2. Acceptance criteria
 
-Edit the ticket in the tracker to correct every gap from step 2.
+Each criterion describes an outcome the user of the work can rely on once it is
+done. A criterion that names an implementation detail (a function, a type, a file
+layout, a sequence of steps) is rewritten as the outcome it stands for.
 
-- Fill each missing or broken part from the sources in step 1. Where a source states
-  the purpose or the expected outcome, use it.
-- Rewrite implementation criteria as the outcome they were standing in for.
-- Correct references that point at the wrong name; remove ones that point at nothing.
-- Keep the author's content. Move misplaced text to the right part instead of
-  deleting it.
+Taken together, the criteria cover the goal: work that met every criterion and still
+missed the goal would mean a criterion is missing or wrong.
+
+Criteria carried over from an earlier ticket are judged against this ticket's goal
+like any other.
+
+- BAD: "`load_config` returns a `ConfigResult` instead of `None`."
+- BAD: "Output matches the current implementation on all existing fixtures."
+- GOOD: "Starting the service with a missing config file exits non-zero and the error
+  names the missing path."
+
+If the ticket has no criteria, write them from the goal.
+
+## 3. Consistency
+
+The title names the goal. The description, goal and criteria describe the same piece
+of work, and no two parts contradict.
+
+## 4. Fix the ticket
+
+Edit the ticket in the tracker so it has a title, a goal and acceptance criteria that
+meet steps 1–3.
+
+- Keep the author's content. Move misplaced text instead of deleting it.
 - Add no design. The ticket states what is needed; the implementer chooses how.
-- Never invent a purpose, scope or outcome no source supports. Leave that part as it
-  is and list it under `Unresolved`.
 
-## 4. Report
+## 5. Return
+
+Return the ticket as it now stands:
 
 ```
-STATUS: READY | UPDATED | INCOMPLETE | COULD NOT CHECK <reason>
 Ticket: <id>
-About: <one or two sentences: what the work is and who it serves>
-
-Changes:
-- <part>: <what was wrong> -> <what it says now>
-
-Unresolved:
-- <part>: <what is missing, and which sources were checked>
+Title: <title>
+Goal: <one sentence>
+Acceptance criteria:
+- <criterion>
+Changed:
+- <what changed, and why>
 ```
-
-- `READY`: nothing needed changing.
-- `UPDATED`: changes made; nothing unresolved.
-- `INCOMPLETE`: at least one unresolved item. The ticket is not ready to start.
